@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+instance/*.db
+instance/pipeline_runs/
+cookies.txt
+*.log
+.venv/
+venv/
+.DS_Store

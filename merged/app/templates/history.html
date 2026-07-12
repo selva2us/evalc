@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}History &mdash; Curriculum Architect{% endblock %}
+{% block content %}
+
+<section class="history-header">
+  <p class="eyebrow">Archive</p>
+  <h1>Previously Drafted Curricula</h1>
+</section>
+
+{% if records %}
+<table class="history-table">
+  <thead>
+    <tr>
+      <th>Technology</th>
+      <th>Model</th>
+      <th>Generated</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for record in records %}
+    <tr>
+      <td>{{ record.technology_name }}</td>
+      <td class="mono">{{ record.model_used }}</td>
+      <td>{{ record.created_at.strftime('%d %b %Y, %H:%M UTC') }}</td>
+      <td><a href="{{ url_for('main.result', curriculum_id=record.id) }}">View &rarr;</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty-state">Nothing drafted yet. <a href="{{ url_for('main.index') }}">Start with your first technology.</a></p>
+{% endif %}
+
+{% endblock %}

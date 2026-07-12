@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Curriculum Architect &mdash; New Skeleton{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <p class="eyebrow">Pillar &gt; Module &gt; Chapter &gt; Page</p>
+  <h1>Draft a full learning skeleton for any technology.</h1>
+  <p class="hero-sub">
+    Enter a technology below. The architect drafts 8&ndash;15 pillars, each broken
+    into modules, chapters, and pages &mdash; from first principles to internals,
+    performance, security, and production usage.
+  </p>
+
+  <form class="generate-form" method="post" action="{{ url_for('main.generate') }}">
+    <label for="technology_name" class="visually-hidden">Technology name</label>
+    <input
+      type="text"
+      id="technology_name"
+      name="technology_name"
+      placeholder="e.g. Kubernetes, React, PostgreSQL, Rust"
+      required
+      autocomplete="off"
+    >
+    <button type="submit">Draft Curriculum</button>
+  </form>
+
+  <div class="hero-annotations" aria-hidden="true">
+    <div class="annotation"><span class="tag">01</span> Pillar</div>
+    <div class="annotation"><span class="tag">02</span> Module</div>
+    <div class="annotation"><span class="tag">03</span> Chapter</div>
+    <div class="annotation"><span class="tag">04</span> Page</div>
+  </div>
+</section>
+
+{% endblock %}

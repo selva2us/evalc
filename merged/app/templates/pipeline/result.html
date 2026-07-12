@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ technology_name }} — Pipeline Result{% endblock %}
+{% block content %}
+
+<section class="result-header">
+  <p class="eyebrow">Step 3 of 3 &mdash; {{ 'Complete' if success else 'Failed' }}</p>
+  <h1>{{ technology_name }}</h1>
+
+  {% if success %}
+    <dl class="meta-row">
+      <div><dt>Document ID</dt><dd class="mono">{{ document_id }}</dd></div>
+      <div><dt>Subject ID</dt><dd class="mono">{{ subject_id }}</dd></div>
+      <div><dt>Run</dt><dd class="mono">{{ run_id }}</dd></div>
+    </dl>
+    <p class="hero-sub">
+      Syllabus submitted, page content generated, and uploaded successfully.
+    </p>
+  {% else %}
+    <p class="hero-sub flash flash-error">{{ error }}</p>
+    <p class="hero-sub">
+      Progress is checkpointed on disk for this run, so re-submitting the
+      same run after fixing the issue will skip work already done.
+    </p>
+  {% endif %}
+
+  <div class="action-row">
+    {% if not success %}
+      <a href="{{ url_for('pipeline.review', run_id=run_id) }}">Back to Review</a>
+    {% endif %}
+    <a href="{{ url_for('pipeline.index') }}">Start Another Run</a>
+  </div>
+</section>
+
+{% endblock %}

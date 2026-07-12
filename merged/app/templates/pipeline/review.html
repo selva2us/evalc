@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}{{ technology_name }} — Review Skeleton{% endblock %}
+{% block content %}
+
+<section class="result-header">
+  <p class="eyebrow">Step 2 of 3 &mdash; Review</p>
+  <h1>{{ technology_name }}</h1>
+  <dl class="meta-row">
+    <div><dt>Pillars</dt><dd>{{ counts.pillars }}</dd></div>
+    <div><dt>Modules</dt><dd>{{ counts.modules }}</dd></div>
+    <div><dt>Chapters</dt><dd>{{ counts.chapters }}</dd></div>
+    <div><dt>Pages</dt><dd>{{ counts.pages }}</dd></div>
+  </dl>
+</section>
+
+<section class="markdown-panel">
+  <pre id="markdown-source"><code>{{ markdown }}</code></pre>
+</section>
+
+<section class="hero" style="margin-top: 2rem;">
+  <p class="hero-sub">
+    If this looks right, enter the target Document ID (used for
+    <code>/api/documents/syllabus-import/&lt;id&gt;</code>) and the Subject ID
+    (used to fetch/upload page content), then approve. Generating and
+    uploading full page content for every page can take a while for large
+    skeletons.
+  </p>
+  <form class="generate-form" method="post" action="{{ url_for('pipeline.submit', run_id=run_id) }}" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
+    <label for="document_id" class="visually-hidden">Document ID</label>
+    <input type="text" id="document_id" name="document_id" placeholder="Document ID" required autocomplete="off">
+    <label for="subject_id" class="visually-hidden">Subject ID</label>
+    <input type="text" id="subject_id" name="subject_id" placeholder="Subject ID" required autocomplete="off">
+    <button type="submit">Approve &amp; Submit</button>
+  </form>
+  <div class="action-row">
+    <a href="{{ url_for('pipeline.index') }}">Discard &amp; Start Over</a>
+  </div>
+</section>
+
+{% endblock %}

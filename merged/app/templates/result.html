@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ record.technology_name }} &mdash; Curriculum{% endblock %}
+{% block content %}
+
+<section class="result-header">
+  <p class="eyebrow">Generated Skeleton</p>
+  <h1>{{ record.technology_name }}</h1>
+  <dl class="meta-row">
+    <div><dt>Model</dt><dd>{{ record.model_used }}</dd></div>
+    <div><dt>Generated</dt><dd>{{ record.created_at.strftime('%d %b %Y, %H:%M UTC') }}</dd></div>
+    <div><dt>ID</dt><dd class="mono">{{ record.id[:8] }}</dd></div>
+  </dl>
+  <div class="action-row">
+    <button id="copy-btn" type="button" data-target="markdown-source">Copy Markdown</button>
+    <a href="{{ url_for('main.download', curriculum_id=record.id) }}">Download .md</a>
+    <a href="{{ url_for('main.index') }}">Draft Another</a>
+  </div>
+</section>
+
+<section class="markdown-panel">
+  <pre id="markdown-source"><code>{{ record.markdown }}</code></pre>
+</section>
+
+<script>
+  document.getElementById('copy-btn').addEventListener('click', function () {
+    const text = document.getElementById('markdown-source').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-btn');
+      const original = btn.textContent;
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    });
+  });
+</script>
+
+{% endblock %}
