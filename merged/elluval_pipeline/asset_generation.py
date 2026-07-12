@@ -24,6 +24,8 @@ import re
 
 from anthropic import Anthropic
 
+from . import demo_content
+
 ASSET_TYPES = {
     "faq": "FAQ",
     "example_program": "Example Program",
@@ -86,7 +88,10 @@ def generate_faq(title: str, breadcrumb: str, cfg) -> dict:
         'fences, no commentary: {"faq_html": "<full HTML string with '
         'headings and <details>/<p> style Q&A pairs>"}'
     )
-    generated = _ask_json(cfg, system, breadcrumb)
+    if getattr(cfg, "is_demo_mode", False):
+        generated = demo_content.generate_demo_faq(title, breadcrumb)
+    else:
+        generated = _ask_json(cfg, system, breadcrumb)
     return {
         "title": "FAQs",
         "sections": [{"type": "html", "value": generated.get("faq_html", "")}],
@@ -119,7 +124,10 @@ def _generate_program(title: str, breadcrumb: str, cfg, program_type: str) -> di
         "constraints, and a hint (but not the full solution) in "
         "description, and put the working solution in solutionCode."
     )
-    generated = _ask_json(cfg, system, breadcrumb)
+    if getattr(cfg, "is_demo_mode", False):
+        generated = demo_content.generate_demo_program(title, breadcrumb, program_type)
+    else:
+        generated = _ask_json(cfg, system, breadcrumb)
     return {
         "title": generated.get("title", title),
         "description": generated.get("description", ""),
@@ -157,7 +165,10 @@ def _generate_overview(level_name: str, title: str, breadcrumb: str, cfg, extra_
         f'overview covering {extra_fields}>", "highlights": ["short '
         f'highlight phrase", "..."]}}'
     )
-    generated = _ask_json(cfg, system, breadcrumb)
+    if getattr(cfg, "is_demo_mode", False):
+        generated = demo_content.generate_demo_overview(level_name, title, breadcrumb)
+    else:
+        generated = _ask_json(cfg, system, breadcrumb)
     return {
         "overviewSummary": generated.get("summary", ""),
         "overviewHtml": generated.get("html", ""),
@@ -204,7 +215,10 @@ def generate_flashcards(title: str, breadcrumb: str, cfg, count: int = 12) -> li
         "with strict JSON, no markdown fences, no commentary, in this "
         'exact shape: {"cards": [{"front": "...", "back": "..."}, ...]}'
     )
-    generated = _ask_json(cfg, system, breadcrumb, max_tokens=2500)
+    if getattr(cfg, "is_demo_mode", False):
+        generated = demo_content.generate_demo_flashcards(title, breadcrumb, count)
+    else:
+        generated = _ask_json(cfg, system, breadcrumb, max_tokens=2500)
     return [
         {"frontText": c.get("front", ""), "backText": c.get("back", "")}
         for c in generated.get("cards", [])
@@ -233,7 +247,10 @@ def generate_module_quiz(title: str, breadcrumb: str, cfg, num_questions: int = 
         "questions that show a snippet (leave both empty strings "
         "otherwise)."
     )
-    generated = _ask_json(cfg, system, breadcrumb, max_tokens=4000)
+    if getattr(cfg, "is_demo_mode", False):
+        generated = demo_content.generate_demo_quiz(title, breadcrumb, num_questions)
+    else:
+        generated = _ask_json(cfg, system, breadcrumb, max_tokens=4000)
     questions = []
     for q in generated.get("questions", []):
         questions.append({

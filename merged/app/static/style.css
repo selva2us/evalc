@@ -140,6 +140,35 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 }
 .flash-error { border-color: var(--error); }
 
+/* ===== Demo Mode banner ===== */
+.demo-banner {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  padding: 0.85rem 1.1rem;
+  border-left: 3px solid var(--teal);
+  background: rgba(76, 140, 140, 0.1);
+  color: var(--text);
+  margin-bottom: 2rem;
+}
+.demo-banner-tag {
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--teal);
+}
+.demo-banner code {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+}
+
 /* ===== Hero (index) ===== */
 .eyebrow {
   font-family: var(--font-mono);

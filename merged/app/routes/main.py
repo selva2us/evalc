@@ -12,8 +12,20 @@ from flask import (
 from app.extensions import db
 from app.models import Curriculum
 from app.services.llm_service import LLMServiceError, generate_curriculum
+from elluval_pipeline.demo_content import resolve_demo_mode
 
 main_bp = Blueprint("main", __name__)
+
+
+def _model_used_label() -> str:
+    """What to record/display as the 'model' for a generated curriculum --
+    the real configured model, or a clear "demo-mode" label when Demo Mode
+    served the content instead (see app/services/llm_service.py)."""
+    api_key = current_app.config.get("ANTHROPIC_API_KEY")
+    demo_setting = current_app.config.get("DEMO_MODE", "auto")
+    if resolve_demo_mode(api_key, demo_setting):
+        return "demo-mode (sample content)"
+    return current_app.config.get("ANTHROPIC_MODEL", "unknown")
 
 
 @main_bp.get("/")
@@ -38,7 +50,7 @@ def generate():
     record = Curriculum(
         technology_name=technology_name,
         markdown=markdown,
-        model_used=current_app.config.get("ANTHROPIC_MODEL", "unknown"),
+        model_used=_model_used_label(),
     )
     db.session.add(record)
     db.session.commit()

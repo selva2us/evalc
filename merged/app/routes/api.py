@@ -1,7 +1,8 @@
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, jsonify, request
 
 from app.extensions import db
 from app.models import Curriculum
+from app.routes.main import _model_used_label
 from app.services.llm_service import LLMServiceError, generate_curriculum
 
 api_bp = Blueprint("api", __name__)
@@ -23,7 +24,7 @@ def api_generate():
     record = Curriculum(
         technology_name=technology_name,
         markdown=markdown,
-        model_used=current_app.config.get("ANTHROPIC_MODEL", "unknown"),
+        model_used=_model_used_label(),
     )
     db.session.add(record)
     db.session.commit()

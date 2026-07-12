@@ -10,6 +10,7 @@ import os
 from flask import Flask
 from app.config import get_config
 from app.extensions import db
+from elluval_pipeline.demo_content import resolve_demo_mode
 
 
 def create_app(config_name: str | None = None) -> Flask:
@@ -43,6 +44,20 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(pipeline_bp, url_prefix="/pipeline")
     app.register_blueprint(assets_bp, url_prefix="/pipeline/assets")
+
+    # ---- Demo Mode banner --------------------------------------------
+    # Both tools share ANTHROPIC_API_KEY/DEMO_MODE, so a single app-wide
+    # flag (available in every template, since they all extend base.html)
+    # is enough to show a "Demo Mode" banner whenever real Anthropic
+    # credentials aren't configured. Purely informational -- doesn't
+    # affect routing or generation logic, which is decided independently
+    # per call site (see elluval_pipeline/demo_content.py).
+    @app.context_processor
+    def inject_demo_mode():
+        demo_active = resolve_demo_mode(
+            app.config.get("ANTHROPIC_API_KEY"), app.config.get("DEMO_MODE", "auto")
+        )
+        return {"demo_mode_active": demo_active}
 
     with app.app_context():
         try:

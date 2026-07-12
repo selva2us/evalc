@@ -18,6 +18,13 @@ class BaseConfig:
     ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5")
     ANTHROPIC_MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS", 8000))
 
+    # "auto" (default): fall back to realistic demo/mock content whenever no
+    # usable ANTHROPIC_API_KEY is configured, and switch back to the real
+    # API automatically the moment one is -- no code changes needed either
+    # direction. "on"/"off" force demo mode on or off. See
+    # elluval_pipeline/demo_content.py for the shared implementation.
+    DEMO_MODE = os.environ.get("DEMO_MODE", "auto")
+
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True

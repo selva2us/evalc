@@ -25,6 +25,8 @@ from pathlib import Path
 
 from anthropic import Anthropic
 
+from . import demo_content
+
 # ---------------------------------------------------------------------------
 # Tree shape - deliberately identical field names to skeleton.py's dataclasses
 # (minus PageInventory, which was PDF-only) so uploader.py / ai_content.py /
@@ -162,6 +164,18 @@ def build_prompt(technology_name: str, notes: str | None = None) -> str:
 
 
 def call_model(technology_name: str, notes: str | None, cfg, logger) -> str:
+    # Demo Mode: no ANTHROPIC_API_KEY (or DEMO_MODE forced on) -> serve a
+    # deterministic mock skeleton instead of failing. Automatically stops
+    # happening the moment a real key is configured (see
+    # demo_content.resolve_demo_mode / Config.is_demo_mode).
+    if getattr(cfg, "is_demo_mode", False):
+        logger.info(
+            "Demo Mode active (no Anthropic credentials configured) - "
+            "generating a sample skeleton for '%s' instead of calling the API",
+            technology_name,
+        )
+        return demo_content.generate_demo_skeleton_markdown(technology_name, notes)
+
     if not cfg.anthropic_api_key:
         raise RuntimeError("ANTHROPIC_API_KEY is required to generate a skeleton.")
 

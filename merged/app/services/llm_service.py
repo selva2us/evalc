@@ -11,6 +11,8 @@ from __future__ import annotations
 import anthropic
 from flask import current_app
 
+from elluval_pipeline.demo_content import generate_demo_skeleton_markdown, resolve_demo_mode
+
 
 class LLMServiceError(RuntimeError):
     """Raised when the curriculum could not be generated."""
@@ -105,6 +107,14 @@ def generate_curriculum(technology_name: str) -> str:
     response) so calling routes can turn it into a clean HTTP response.
     """
     api_key = current_app.config.get("ANTHROPIC_API_KEY")
+    demo_mode_setting = current_app.config.get("DEMO_MODE", "auto")
+
+    # Demo Mode: no usable ANTHROPIC_API_KEY (or DEMO_MODE forced on) ->
+    # serve a deterministic mock curriculum instead of failing. Reverts to
+    # the real Anthropic call automatically once a real key is configured.
+    if resolve_demo_mode(api_key, demo_mode_setting):
+        return generate_demo_skeleton_markdown(technology_name)
+
     if not api_key:
         raise LLMServiceError(
             "ANTHROPIC_API_KEY is not configured. Set it in your environment "

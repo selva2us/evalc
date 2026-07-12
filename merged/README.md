@@ -199,6 +199,59 @@ Notes:
 - Skipping an asset leaves it as `pending`/`skipped` in
   `assets/<asset_id>.json` so you can come back to it later from the hub.
 
+## Demo Mode (no Anthropic subscription required)
+
+Every place in this app that would otherwise call the Anthropic API --
+`app/services/llm_service.py` (Architect tool), `elluval_pipeline/ai_skeleton.py`
+and `ai_content.py` (AI Pipeline skeleton + page content), and
+`elluval_pipeline/asset_generation.py` (FAQs, example/practice programs,
+overviews, flashcards, quizzes) -- automatically falls back to realistic,
+deterministic sample content whenever no usable `ANTHROPIC_API_KEY` is
+configured. This is controlled by the shared `DEMO_MODE` variable:
+
+| `DEMO_MODE` | Behavior |
+|---|---|
+| `auto` (default) | Demo content whenever `ANTHROPIC_API_KEY` is missing/blank/a placeholder; real Anthropic calls the moment a real key is set. No code changes needed either direction. |
+| `on` | Always demo content, even if a real key is configured (handy for cost-free walkthroughs/demos). |
+| `off` | Never demo content; a missing key raises the original `ANTHROPIC_API_KEY is required` error, unchanged from before Demo Mode existed. |
+
+What this means in practice:
+
+- **Right now, with no `ANTHROPIC_API_KEY`**, you can already run through the
+  entire product: draft a curriculum on `/`, run the full AI Pipeline wizard
+  on `/pipeline/` (skeleton -> review -> submit -> generate content -> Review
+  Mode page-by-page approval), and generate every Asset Studio type (FAQs,
+  example/practice programs, chapter/module/pillar overviews, flashcards,
+  module quizzes) on `/pipeline/assets/<run_id>` -- all with realistic-looking
+  placeholder content instead of errors.
+- **A yellow/teal "Demo Mode" banner** appears at the top of every page while
+  it's active, so it's never ambiguous whether you're looking at real or
+  sample content. Generated curricula also record `demo-mode (sample
+  content)` as their "model" in the Architect tool's history/result pages.
+- **Demo content is deterministic**, seeded from the technology name / page
+  title, so re-running the same demo produces the same output -- useful for
+  repeatable stakeholder walkthroughs and stable screenshots.
+- **The demo curriculum skeleton is intentionally smaller** than the real
+  8-15 pillar / 4-10 module / 5-12 chapter / 5-20 page fan-out (it uses a
+  fixed 6-8 / 2-3 / 2-3 / 3-4 range instead), so a full demo run stays fast
+  to click through while still exercising the exact same Pillar > Module >
+  Chapter > Page hierarchy end-to-end.
+- **Once you add a real `ANTHROPIC_API_KEY`** (and remove/unset `DEMO_MODE`,
+  or leave it on `auto`), the app switches to real, technology-specific AI
+  generation automatically -- nothing else to configure, and the existing
+  Anthropic integration itself was not modified.
+
+All of this lives in one new module, `elluval_pipeline/demo_content.py`,
+plus a small "if demo mode: use demo_content instead" branch inside each of
+the four generation call sites above -- nothing about the real
+generation code paths, the review/edit UI, or the upload payload shapes
+was changed.
+
+Note: Demo Mode only covers **content generation** (the Anthropic calls).
+Submitting/uploading to your curriculum backend still uses the real
+`BASE_URL`/`API_TOKEN` you configure for `/pipeline` and `/pipeline/assets`
+-- that integration is unrelated to Anthropic and wasn't touched.
+
 ## API usage (Architect tool)
 
 ```bash

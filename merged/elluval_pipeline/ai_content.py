@@ -30,6 +30,8 @@ from pathlib import Path
 
 from anthropic import Anthropic
 
+from . import demo_content
+
 SYSTEM_PROMPT = """You are an instructional designer writing original teaching \
 material for a structured online course. You will be given the full \
 breadcrumb (Pillar > Module > Chapter > Page) for one page, plus the \
@@ -81,13 +83,27 @@ def _breadcrumb_context(skeleton: dict):
 
 class ContentGenerator:
     def __init__(self, cfg, logger, model: str | None = None):
-        if not cfg.anthropic_api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY is required for the content generation stage.")
-        self.client = Anthropic(api_key=cfg.anthropic_api_key)
+        # Demo Mode: skip the Anthropic client entirely and serve
+        # deterministic mock page content. Reverts to the real client
+        # automatically once a real ANTHROPIC_API_KEY is configured.
+        self.demo_mode = getattr(cfg, "is_demo_mode", False)
+        if self.demo_mode:
+            self.client = None
+            logger.info(
+                "Demo Mode active (no Anthropic credentials configured) - "
+                "page content will be sample/mock content."
+            )
+        else:
+            if not cfg.anthropic_api_key:
+                raise RuntimeError("ANTHROPIC_API_KEY is required for the content generation stage.")
+            self.client = Anthropic(api_key=cfg.anthropic_api_key)
         self.model = model or getattr(cfg, "content_model", None) or "claude-sonnet-4-6"
         self.logger = logger
 
     def _call(self, title: str, breadcrumb: str) -> dict:
+        if self.demo_mode:
+            return demo_content.generate_demo_page_content(title, breadcrumb)
+
         resp = self.client.messages.create(
             model=self.model,
             max_tokens=2000,

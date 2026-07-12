@@ -26,6 +26,11 @@ Optional:
                     claude-sonnet-4-6)
     CONTENT_MODEL   model used to write each page's content (default
                     claude-sonnet-4-6)
+    DEMO_MODE       "auto" (default) / "on" / "off" -- see demo_content.py.
+                    In "auto", content generation automatically falls back
+                    to realistic mock content whenever ANTHROPIC_API_KEY is
+                    missing/unset, and automatically resumes calling the
+                    real API the moment a real key is configured.
 """
 from __future__ import annotations
 
@@ -38,6 +43,8 @@ try:
     load_dotenv()
 except ImportError:
     pass
+
+from . import demo_content
 
 
 def _require(name: str, default: str | None = None) -> str:
@@ -63,6 +70,11 @@ class Config:
     document_id: str | None = None
     skeleton_model: str = "claude-sonnet-4-6"
     content_model: str = "claude-sonnet-4-6"
+    # "auto" (default): Demo Mode turns on automatically whenever no usable
+    # ANTHROPIC_API_KEY is configured, and turns back off automatically the
+    # moment a real one is -- no code changes needed either direction. Can
+    # be forced with DEMO_MODE=on / DEMO_MODE=off. See demo_content.py.
+    demo_mode: str = "auto"
     headers: dict = field(init=False)
     upload_headers: dict = field(init=False)
 
@@ -114,6 +126,14 @@ class Config:
     def compiler_practice_url(self, chapter_id) -> str:
         return f"{self.base_url}/api/compiler/practice/chapter/{chapter_id}"
 
+    # ---- Demo Mode -------------------------------------------------
+    @property
+    def is_demo_mode(self) -> bool:
+        """True when content-generation calls should use demo_content.py's
+        mock generators instead of the real Anthropic API. See
+        demo_content.resolve_demo_mode() for the exact rules."""
+        return demo_content.resolve_demo_mode(self.anthropic_api_key, self.demo_mode)
+
 
 def load_config(subject_id: str | None = None) -> Config:
     cookie_path = Path(os.environ.get("API_COOKIE_FILE", "cookies.txt"))
@@ -136,4 +156,5 @@ def load_config(subject_id: str | None = None) -> Config:
         document_id=os.environ.get("DOCUMENT_ID"),
         skeleton_model=os.environ.get("SKELETON_MODEL", "claude-sonnet-4-6"),
         content_model=os.environ.get("CONTENT_MODEL", "claude-sonnet-4-6"),
+        demo_mode=os.environ.get("DEMO_MODE", "auto"),
     )

@@ -25,6 +25,13 @@
   </header>
 
   <main class="site-main">
+    {% if demo_mode_active %}
+      <div class="demo-banner" role="status">
+        <span class="demo-banner-tag">Demo Mode</span>
+        <span>No Anthropic API key configured &mdash; showing sample/mock content so you can preview the full workflow. Add <code>ANTHROPIC_API_KEY</code> to switch to real AI generation, no code changes needed.</span>
+      </div>
+    {% endif %}
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flash-stack">
