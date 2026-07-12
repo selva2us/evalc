@@ -27,6 +27,9 @@
     {% if not success %}
       <a href="{{ url_for('pipeline.review', run_id=run_id) }}">Back to Review</a>
     {% endif %}
+    {% if success %}
+      <a href="{{ url_for('assets.hub', run_id=run_id) }}">Generate FAQs, quizzes, flashcards &amp; more &rarr;</a>
+    {% endif %}
     <a href="{{ url_for('pipeline.index') }}">Start Another Run</a>
   </div>
 </section>

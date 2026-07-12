@@ -127,6 +127,78 @@ so the request doesn't hold a worker process for minutes. `Pipeline` and
 its `StateStore` are already resumable/idempotent per page, so this is a
 drop-in change, not a redesign.
 
+## AI Pipeline: Review Mode (optional)
+
+By default, `/pipeline/submit/<run_id>` behaves exactly as before: generate
+and upload every page's content automatically, then show a result summary.
+
+A new **optional** "Manual Review" choice on the review page switches to a
+page-by-page workflow instead, without changing anything about the default
+path:
+
+1. Submits the skeleton, same as always.
+2. For each page (in document order): generates its content (if not already
+   generated), shows a rendered preview plus an editable JSON textarea for
+   the exact `{title, sections}` payload, and lets you Approve, Regenerate,
+   or Skip.
+3. Approving a page uploads **only that page** via the same
+   `POST /api/pages/<pageId>/content` call the automatic flow already uses
+   — the payload contract is untouched — then automatically advances to the
+   next page.
+4. Once every page is approved or skipped, you land on the same result
+   summary page the automatic flow uses.
+
+This is implemented entirely in `app/routes/pipeline.py` alongside the
+existing routes; the automatic flow's code path is untouched (verified: an
+old client that never sends a `mode` field gets identical behavior to
+before). Per-run metadata (document/subject id) needed to drive the
+page-by-page routes statelessly is cached in
+`instance/pipeline_runs/<run_id>/run_meta.json`; per-page approve/skip
+progress is tracked in a `review_upload` stage inside that run's existing
+`state.json`, kept separate from the automatic flow's own `content`/`upload`
+stages so the two workflows can't interfere with each other.
+
+## Asset Studio: FAQs, programs, overviews, flashcards, quizzes (optional)
+
+A third, fully optional layer on top of the two above: `/pipeline/assets/<run_id>`,
+linked from the result page after a successful run. Generates and submits
+eight additional educational asset types, each through the same
+generate → review/edit → approve → submit → skip workflow as page-content
+Review Mode:
+
+| Asset | Applicable to | Endpoint |
+|---|---|---|
+| FAQ | page / chapter / module / pillar | `POST /api/pages/<id>/content` (same shape as page content, `title: "FAQs"`) |
+| Example Program | page / chapter | `POST /api/compiler/practice/chapter/<id>` (`programType: "EXAMPLE"`) |
+| Practice Program | page / chapter | `POST /api/compiler/practice/chapter/<id>` (`programType: "PRACTICE"`) |
+| Chapter Overview | chapter | `PUT /api/curriculum/chapters/<id>/overview` |
+| Module Overview | module | `PUT /api/curriculum/modules/<id>/overview` |
+| Pillar Overview | pillar | `PUT /api/curriculum/pillars/<id>/overview` |
+| Flashcards | module | `PUT /api/curriculum/modules/<id>/flashcards` (payload is a JSON **list**) |
+| Module Quiz | module | `PUT /api/curriculum/modules/<id>/quiz?subjectId=<id>` |
+
+Notes:
+
+- **Fully additive.** Lives in its own module (`elluval_pipeline/asset_generation.py`)
+  and its own blueprint (`app/routes/assets.py`, mounted at `/pipeline/assets`),
+  with its own storage (`instance/pipeline_runs/<run_id>/assets/`). Nothing
+  in the skeleton/page-content pipeline calls into it, and nothing about
+  the existing routes' behavior changed to add it (verified with
+  regression tests: legacy auto-mode and page-content Review Mode behave
+  identically with or without this feature present).
+- **Target ID.** Some asset types' real endpoint is scoped one level
+  coarser than where you might generate them (e.g. a page-level "Example
+  Program" still POSTs to its parent chapter's endpoint, since that's the
+  only endpoint given for programs). The review page auto-suggests a
+  target ID by matching titles against the live subject tree, but always
+  shows it as an editable field — confirm or correct it before approving.
+- **Program `testCases`.** The reference payload only showed an empty
+  list for `testCases`, so generated example/practice programs leave it
+  empty for you to fill in during review rather than guessing at a shape
+  that wasn't specified.
+- Skipping an asset leaves it as `pending`/`skipped` in
+  `assets/<asset_id>.json` so you can come back to it later from the hub.
+
 ## API usage (Architect tool)
 
 ```bash

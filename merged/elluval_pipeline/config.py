@@ -96,6 +96,24 @@ class Config:
     def syllabus_import_url(self, document_id) -> str:
         return f"{self.base_url}/api/documents/syllabus-import/{document_id}"
 
+    # ---- Additional educational-asset endpoints (optional feature set) ----
+    # Same base URL / auth headers as everything else; added without
+    # touching any of the URL helpers above.
+    def chapter_overview_url(self, chapter_id) -> str:
+        return f"{self.base_url}/api/curriculum/chapters/{chapter_id}/overview?subjectId={self.subject_id}"
+
+    def pillar_overview_url(self, pillar_id) -> str:
+        return f"{self.base_url}/api/curriculum/pillars/{pillar_id}/overview?subjectId={self.subject_id}"
+
+    def module_flashcards_url(self, module_id) -> str:
+        return f"{self.base_url}/api/curriculum/modules/{module_id}/flashcards"
+
+    def module_quiz_url(self, module_id) -> str:
+        return f"{self.base_url}/api/curriculum/modules/{module_id}/quiz?subjectId={self.subject_id}"
+
+    def compiler_practice_url(self, chapter_id) -> str:
+        return f"{self.base_url}/api/compiler/practice/chapter/{chapter_id}"
+
 
 def load_config(subject_id: str | None = None) -> Config:
     cookie_path = Path(os.environ.get("API_COOKIE_FILE", "cookies.txt"))

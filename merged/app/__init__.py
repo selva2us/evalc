@@ -26,16 +26,8 @@ def create_app(config_name: str | None = None) -> Flask:
     # build the sqlite URI from that absolute path instead of a relative
     # string.
     os.makedirs(app.instance_path, exist_ok=True)
-    uri = app.config.get("SQLALCHEMY_DATABASE_URI")
-    if not uri:
+    if not app.config.get("SQLALCHEMY_DATABASE_URI"):
         db_path = os.path.join(app.instance_path, "curriculum.db")
-        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
-    elif uri.startswith("sqlite:///") and not uri.startswith("sqlite:////") and uri != "sqlite:///:memory:":
-        # A relative sqlite path (e.g. from an old .env) is resolved against
-        # the process cwd, not the project root -- rewrite it against
-        # instance_path so it works no matter where the app is launched from.
-        rel_path = uri[len("sqlite:///"):]
-        db_path = os.path.join(app.instance_path, os.path.basename(rel_path))
         app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
 
     # ---- extensions -------------------------------------------------
@@ -45,10 +37,12 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.routes.main import main_bp
     from app.routes.api import api_bp
     from app.routes.pipeline import pipeline_bp
+    from app.routes.assets import assets_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(pipeline_bp, url_prefix="/pipeline")
+    app.register_blueprint(assets_bp, url_prefix="/pipeline/assets")
 
     with app.app_context():
         try:

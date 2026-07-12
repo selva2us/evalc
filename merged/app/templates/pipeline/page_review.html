@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — Review Page {{ position }}/{{ total }}{% endblock %}
+{% block content %}
+
+<section class="result-header">
+  <p class="eyebrow">Review Mode &mdash; Page {{ position }} of {{ total }}{% if already_handled %} (already handled — regenerate to redo){% endif %}</p>
+  <h1>{{ title }}</h1>
+  <pre style="white-space: pre-wrap; font-size: 0.85rem; opacity: 0.75; margin: 0.5rem 0 0;">{{ breadcrumb }}</pre>
+</section>
+
+<section class="markdown-panel" aria-label="Rendered preview">
+  {% for section in sections %}
+    {% if section.type == "html" %}
+      <div>{{ section.value | safe }}</div>
+    {% elif section.type == "code" %}
+      <pre><code>{{ section.value }}</code></pre>
+    {% elif section.type == "output" %}
+      <pre style="opacity:0.8;"><code>{{ section.value }}</code></pre>
+    {% elif section.type == "image" %}
+      {% if section.value %}<img src="{{ section.value }}" alt="{{ section.caption or title }}" style="max-width:100%;">{% endif %}
+    {% endif %}
+  {% else %}
+    <p><em>No sections generated yet.</em></p>
+  {% endfor %}
+</section>
+
+<section class="hero" style="margin-top: 2rem;">
+  <p class="hero-sub">
+    Edit the JSON below if the generated content needs changes, then approve
+    to submit just this page to <code>/api/pages/&lt;id&gt;/content</code>.
+    The payload shape (<code>title</code> + <code>sections</code>) is exactly
+    what the existing upload stage already sends — nothing about the API
+    contract changes here.
+  </p>
+
+  <form method="post" action="{{ url_for('pipeline.page_approve', run_id=run_id, key=run_key) }}" style="display:flex; flex-direction:column; gap:0.75rem;">
+    <label for="content_json" class="visually-hidden">Page content JSON</label>
+    <textarea id="content_json" name="content_json" rows="18" spellcheck="false" style="width:100%; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.85rem;">{{ content_json }}</textarea>
+    <div class="action-row" style="gap:0.75rem;">
+      <button type="submit">Approve &amp; Submit This Page</button>
+    </div>
+  </form>
+
+  <div class="action-row" style="margin-top:1rem; gap:1rem;">
+    <form method="post" action="{{ url_for('pipeline.page_regenerate', run_id=run_id, key=run_key) }}">
+      <button type="submit" style="background:transparent; border:1px solid currentColor;">Regenerate This Page</button>
+    </form>
+    <form method="post" action="{{ url_for('pipeline.page_skip', run_id=run_id, key=run_key) }}">
+      <button type="submit" style="background:transparent; border:1px solid currentColor;">Skip (don't upload)</button>
+    </form>
+    <a href="{{ url_for('pipeline.index') }}">Discard &amp; Start Over</a>
+  </div>
+</section>
+
+{% endblock %}

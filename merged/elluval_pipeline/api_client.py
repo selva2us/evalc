@@ -76,6 +76,59 @@ class CurriculumClient:
         self.logger.error("Module overview update failed for %s (%s): %s", module_id, resp.status_code, resp.text[:300])
         return False
 
+    # ---- Additional educational-asset submissions (optional feature set) ----
+    # FAQ pages reuse the exact same endpoint/payload shape as regular page
+    # content (POST /api/pages/<id>/content), so they go through
+    # post_page_content() directly -- no new method needed for that one.
+
+    def put_chapter_overview(self, chapter_id, payload: dict) -> bool:
+        url = self.cfg.chapter_overview_url(chapter_id)
+        resp = self.session.put(url, headers=self.cfg.headers, json=payload, timeout=30)
+        if resp.ok:
+            self.logger.info("Overview updated for chapter %s", chapter_id)
+            return True
+        self.logger.error("Chapter overview update failed for %s (%s): %s", chapter_id, resp.status_code, resp.text[:300])
+        return False
+
+    def put_pillar_overview(self, pillar_id, payload: dict) -> bool:
+        url = self.cfg.pillar_overview_url(pillar_id)
+        resp = self.session.put(url, headers=self.cfg.headers, json=payload, timeout=30)
+        if resp.ok:
+            self.logger.info("Overview updated for pillar %s", pillar_id)
+            return True
+        self.logger.error("Pillar overview update failed for %s (%s): %s", pillar_id, resp.status_code, resp.text[:300])
+        return False
+
+    def put_module_flashcards(self, module_id, payload: list) -> bool:
+        url = self.cfg.module_flashcards_url(module_id)
+        resp = self.session.put(url, headers=self.cfg.headers, json=payload, timeout=30)
+        if resp.ok:
+            self.logger.info("Flashcards updated for module %s", module_id)
+            return True
+        self.logger.error("Flashcards update failed for %s (%s): %s", module_id, resp.status_code, resp.text[:300])
+        return False
+
+    def put_module_quiz(self, module_id, payload: dict) -> bool:
+        url = self.cfg.module_quiz_url(module_id)
+        resp = self.session.put(url, headers=self.cfg.headers, json=payload, timeout=30)
+        if resp.ok:
+            self.logger.info("Quiz updated for module %s", module_id)
+            return True
+        self.logger.error("Quiz update failed for %s (%s): %s", module_id, resp.status_code, resp.text[:300])
+        return False
+
+    def post_compiler_practice(self, chapter_id, payload: dict) -> bool:
+        """Used for both Example Programs (programType=EXAMPLE) and
+        Practice Programs (programType=PRACTICE) -- same endpoint, same
+        payload shape, only that field differs."""
+        url = self.cfg.compiler_practice_url(chapter_id)
+        resp = self.session.post(url, headers=self.cfg.headers, json=payload, timeout=30)
+        if resp.ok:
+            self.logger.info("Program submitted for chapter %s", chapter_id)
+            return True
+        self.logger.error("Program submission failed for chapter %s (%s): %s", chapter_id, resp.status_code, resp.text[:300])
+        return False
+
     def import_syllabus(self, document_id, technology_name: str, markdown: str, tree: list[dict]) -> dict | None:
         """
         POST the reviewed skeleton to /api/documents/syllabus-import/<document_id>.

@@ -30,6 +30,19 @@
     <input type="text" id="document_id" name="document_id" placeholder="Document ID" required autocomplete="off">
     <label for="subject_id" class="visually-hidden">Subject ID</label>
     <input type="text" id="subject_id" name="subject_id" placeholder="Subject ID" required autocomplete="off">
+
+    <fieldset style="border: 1px solid var(--border-color, #ddd); border-radius: 6px; padding: 0.75rem 1rem; margin: 0;">
+      <legend style="padding: 0 0.4rem; font-size: 0.9rem;">Content workflow</legend>
+      <label style="display:flex; align-items:flex-start; gap:0.5rem; margin-bottom:0.5rem;">
+        <input type="radio" name="mode" value="auto" checked style="margin-top:0.25rem;">
+        <span><strong>Automatic</strong> — generate and upload every page's content right away (current default behavior).</span>
+      </label>
+      <label style="display:flex; align-items:flex-start; gap:0.5rem;">
+        <input type="radio" name="mode" value="review" style="margin-top:0.25rem;">
+        <span><strong>Manual Review</strong> — generate one page at a time, let you edit and approve it, then submit just that page before moving to the next.</span>
+      </label>
+    </fieldset>
+
     <button type="submit">Approve &amp; Submit</button>
   </form>
   <div class="action-row">

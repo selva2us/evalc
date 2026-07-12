@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ technology_name }} — Asset Studio{% endblock %}
+{% block content %}
+
+<section class="result-header">
+  <p class="eyebrow">Asset Studio (optional)</p>
+  <h1>{{ technology_name }}</h1>
+  <p class="hero-sub">
+    Generate FAQs, example/practice programs, chapter/module/pillar
+    overviews, flashcards, and module quizzes for any unit below. Each one
+    goes through the same generate &rarr; review/edit &rarr; approve &rarr;
+    submit workflow as page content, using the same content APIs your
+    backend already exposes — nothing here touches the main
+    skeleton/page-content pipeline.
+  </p>
+</section>
+
+<section class="markdown-panel" style="padding: 1rem;">
+  {% for node in nodes %}
+    {% set indent = {"pillar": 0, "module": 1, "chapter": 2, "page": 3}[node.level] %}
+    <div style="margin-left: {{ indent * 1.5 }}rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(128,128,128,0.15);">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+        <div>
+          <span class="tag" style="text-transform:uppercase; font-size:0.7rem; opacity:0.6;">{{ node.level }}</span>
+          <strong>{{ node.title }}</strong>
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+          {% for type_key, type_label in asset_types.items() %}
+            {% if node.level in applicable_levels[type_key] %}
+              <form method="post" action="{{ url_for('assets.generate', run_id=run_id) }}" style="display:inline;">
+                <input type="hidden" name="node_level" value="{{ node.level }}">
+                <input type="hidden" name="node_key" value="{{ node.key }}">
+                <input type="hidden" name="node_title" value="{{ node.title }}">
+                <input type="hidden" name="breadcrumb" value="{{ node.breadcrumb }}">
+                <input type="hidden" name="asset_type" value="{{ type_key }}">
+                <button type="submit" style="font-size:0.75rem; padding:0.3rem 0.6rem;">+ {{ type_label }}</button>
+              </form>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if assets_by_node_key.get(node.key) %}
+        <ul style="margin: 0.4rem 0 0; padding-left: 1.2rem; font-size: 0.85rem;">
+          {% for record in assets_by_node_key[node.key] %}
+            <li>
+              {{ asset_types.get(record.asset_type, record.asset_type) }} —
+              <span style="opacity:0.7;">{{ record.status }}</span>
+              {% if record.status not in ("done",) %}
+                — <a href="{{ url_for('assets.review', run_id=run_id, asset_id=record.asset_id) }}">review</a>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% endfor %}
+</section>
+
+<div class="action-row" style="margin-top: 1.5rem;">
+  <a href="{{ url_for('pipeline.index') }}">Back to AI Pipeline</a>
+</div>
+
+{% endblock %}
