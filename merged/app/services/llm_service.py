@@ -12,91 +12,17 @@ import anthropic
 from flask import current_app
 
 from elluval_pipeline.demo_content import generate_demo_skeleton_markdown, resolve_demo_mode
+from elluval_pipeline.prompts import get_prompt
 
 
 class LLMServiceError(RuntimeError):
     """Raised when the curriculum could not be generated."""
 
 
-PROMPT_TEMPLATE = """You are a world-class curriculum architect, senior software engineer, technical author, and educational content designer.
-Your task is to generate a COMPLETE markdown learning skeleton for the technology provided by the user.
-Technology:
-{technology_name}
-The output must be a clean and structured markdown document.
-The markdown must follow this hierarchy exactly:
-# Pillar
-## Module
-### Chapter
-Page
-Example:
-# Pillar 1 – Foundations
-## Module 1 – Introduction
-### Chapter 1 – History
-Page 1 - Origins
-Page 2 - Evolution
-Page 3 - Major Milestones
-Rules:
-1. Generate between 8 and 15 Pillars.
-2. Each Pillar should contain 4 to 10 Modules.
-3. Each Module should contain 5 to 12 Chapters.
-4. Each Chapter should contain 5 to 20 Pages.
-5. The structure must progress naturally from beginner to expert level.
-The curriculum must include:
-- History and evolution
-- Core concepts
-- Syntax and fundamentals
-- Internal architecture
-- Runtime behavior
-- Memory management
-- Design patterns
-- Ecosystem and libraries
-- Tooling
-- Security
-- Performance
-- Debugging
-- Testing
-- Deployment
-- Best practices
-- Real-world applications
-- Enterprise usage
-- Advanced topics
-- Common mistakes
-- Interview preparation
-- Future roadmap
-Technology-specific sections must be included, appropriate to {technology_name} (for example internals, runtime, concurrency model, ecosystem tools, and architecture concepts that are specific to this technology).
-Requirements:
-- Avoid generic tutorials.
-- Do not generate content explanations.
-- Generate only the curriculum structure.
-- Ensure every topic appears exactly once.
-- Avoid duplicate chapters.
-- Ensure logical learning progression.
-- Prefer industry standards over academic ordering.
-- Include internals and architecture wherever applicable.
-- Include historical context where relevant.
-- Include deprecated technologies if they influenced modern design.
-- Include ecosystem tools and alternatives.
-- Include production and enterprise usage patterns.
-Formatting rules:
-- Output must be valid markdown.
-- Use only markdown headings and bullet-free page lines.
-- Do not include introductory text.
-- Do not include conclusions.
-- Do not include explanations outside the hierarchy.
-- Use title case for all headings.
-- Keep naming concise and professional.
-The generated markdown should be suitable for:
-- PDF generation
-- LMS systems
-- Curriculum management systems
-- Course generation pipeline
-- AI content generation pipelines.
-Respond with ONLY the markdown document. No preamble, no code fences, no commentary.
-"""
-
-
 def build_prompt(technology_name: str) -> str:
-    return PROMPT_TEMPLATE.format(technology_name=technology_name.strip())
+    # Prompt text lives in prompts/curriculum_system_prompt.txt (see
+    # elluval_pipeline/prompts.py) rather than hardcoded here.
+    return get_prompt("curriculum_system_prompt", technology_name=technology_name.strip())
 
 
 def generate_curriculum(technology_name: str) -> str:

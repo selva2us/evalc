@@ -28,6 +28,8 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict, dataclass, field
+
+from .prompts import get_prompt
 from pathlib import Path
 
 import fitz  # PyMuPDF
@@ -232,23 +234,9 @@ def build_modules(entries: list[dict]) -> list[dict]:
 # does an exact-text heading search against real content.
 # ---------------------------------------------------------------------------
 
-PILLAR_GROUPING_SYSTEM_PROMPT = """You are structuring a technical reference book's \
-chapter list into a small number of thematic "Pillars" for a course outline. \
-You will be given the book's real chapters in their original order, each with \
-its index and how many sections it contains. Decide where the natural topic \
-breaks are - do not force any particular number of pillars, and do not force \
-even sizes. Chapters MUST stay in their original order: each pillar is a \
-contiguous run of chapters (pillar 1 covers chapters from index 0 up to some \
-cut point, pillar 2 continues from there, and so on) - never reorder or skip \
-a chapter. Give each pillar a short, descriptive title (3-6 words) that \
-reflects what its chapters have in common.
-
-Respond ONLY with strict JSON, no commentary, no markdown fences:
-{"pillars": [{"title": "...", "start_index": 0}, {"title": "...", "start_index": 7}, ...]}
-start_index is the 0-based index of the first chapter in that pillar. The
-first pillar's start_index must be 0, and start_index values must strictly
-increase.
-"""
+# Prompt text lives in prompts/legacy_pillar_grouping_prompt.txt (see
+# elluval_pipeline/prompts.py) rather than hardcoded here.
+PILLAR_GROUPING_SYSTEM_PROMPT = get_prompt("legacy_pillar_grouping_prompt")
 
 
 def _fallback_pillar_boundaries(num_chapters: int, modules_per_pillar: int) -> list[dict]:

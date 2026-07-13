@@ -104,6 +104,19 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   letter-spacing: 0.06em;
 }
 .site-nav a:hover { color: var(--gold); }
+.nav-logout-form { display: inline; margin: 0; }
+.nav-logout-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+.nav-logout-btn:hover { color: var(--gold); }
 
 /* ===== Main / layout ===== */
 .site-main {
@@ -168,6 +181,193 @@ a:focus-visible, button:focus-visible, input:focus-visible {
   padding: 0.1rem 0.35rem;
   border-radius: 3px;
 }
+
+/* ===== Login page ===== */
+.login-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 3rem;
+}
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2.25rem 2rem;
+}
+.login-card h1 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 500;
+  margin: 0 0 0.4rem;
+}
+.login-card .hero-sub { margin-bottom: 1.75rem; font-size: 0.92rem; }
+.field-group { margin-bottom: 1.25rem; }
+.field-group label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+.field-group input, .field-group textarea, .field-group select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 2px;
+}
+.field-group input:focus, .field-group textarea:focus, .field-group select:focus {
+  border-color: var(--gold);
+  outline: none;
+}
+.field-help { color: var(--text-muted); font-size: 0.8rem; margin-top: 0.4rem; line-height: 1.5; }
+.btn-primary {
+  background: var(--gold);
+  color: var(--bg);
+  border: none;
+  padding: 0.8rem 1.3rem;
+  border-radius: 2px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+  width: 100%;
+}
+.btn-primary:hover { background: #d9b06a; }
+
+/* ===== Admin pages (settings / cookies / prompts) ===== */
+.admin-header { margin-bottom: 2rem; }
+.admin-header h1 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  margin: 0 0 0.5rem;
+}
+.admin-tabs { display: flex; gap: 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border); }
+.admin-tabs a {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-bottom: 0.8rem;
+  border-bottom: 2px solid transparent;
+}
+.admin-tabs a:hover { text-decoration: none; color: var(--text); }
+.admin-tabs a.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+.settings-group { margin-bottom: 2.5rem; }
+.settings-group h2 {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--teal);
+  margin: 0 0 1rem;
+}
+.setting-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 0.85rem;
+}
+.setting-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+.setting-label { font-weight: 500; }
+.setting-value {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  background: var(--text-muted);
+}
+.status-dot.on { background: var(--teal); }
+.status-dot.off { background: var(--error); }
+.setting-form { display: flex; gap: 0.6rem; margin-top: 0.6rem; }
+.setting-form input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 2px;
+}
+.btn-small {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-small:hover { border-color: var(--gold); color: var(--gold); }
+.btn-small.btn-danger:hover { border-color: var(--error); color: var(--error); }
+
+.cookie-grid { display: grid; gap: 0.85rem; margin-bottom: 2rem; }
+.cookie-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1.1rem 1.25rem;
+}
+.cookie-row-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.7rem; }
+.cookie-name { font-family: var(--font-mono); font-weight: 500; }
+.cookie-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem; }
+
+.prompt-layout { display: flex; gap: 2rem; align-items: flex-start; }
+.prompt-list { flex: 0 0 220px; display: flex; flex-direction: column; gap: 0.3rem; }
+.prompt-list a {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  padding: 0.5rem 0.7rem;
+  border-radius: 2px;
+  border: 1px solid transparent;
+}
+.prompt-list a:hover { text-decoration: none; color: var(--text); border-color: var(--border); }
+.prompt-list a.active { color: var(--gold); border-color: var(--border); background: var(--surface); }
+.prompt-editor { flex: 1; min-width: 0; }
+.prompt-editor textarea {
+  width: 100%;
+  min-height: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  padding: 1rem;
+  border-radius: 3px;
+  resize: vertical;
+}
+.prompt-editor textarea:focus { border-color: var(--gold); outline: none; }
+.prompt-editor-actions { margin-top: 1rem; display: flex; justify-content: flex-end; }
+.prompt-editor-actions button { width: auto; padding: 0.75rem 1.5rem; }
 
 /* ===== Hero (index) ===== */
 .eyebrow {

@@ -32,27 +32,11 @@ from pathlib import Path
 
 from anthropic import Anthropic
 
-SYSTEM_PROMPT = """You are an instructional designer creating original teaching \
-material for Indian secondary/undergraduate students learning to code. You will \
-be given the TOPIC of a page and some reference notes describing what concept \
-and code example it should cover. Do NOT paraphrase or lightly reword the \
-reference notes - write your own original explanation of the underlying \
-concept, in your own structure and your own examples. Use simple English, \
-relatable Indian context examples where natural (e.g. Aadhaar forms, IRCTC \
-booking pages, exam result portals) instead of the generic examples in the \
-reference notes. Add: a short intro, a clear explanation, a bulleted \
-"Key Points" summary, and if relevant a short "Quick Recap" for memorization. \
-If the reference includes a code sample, write a NEW original code sample \
-illustrating the same concept (not a copy of the reference code). Respond \
-ONLY with strict JSON, no markdown fences, no commentary, in this exact shape:
-{
-  "intro_html": "<p>...</p>",
-  "explanation_html": "<div>...</div>",
-  "code": {"language": "html", "value": "..."} or null,
-  "key_points": ["...", "..."],
-  "quick_recap_html": "<div>...</div>" or null
-}
-"""
+from .prompts import get_prompt
+
+# Prompt text lives in prompts/legacy_rewriter_prompt.txt (see
+# elluval_pipeline/prompts.py) rather than hardcoded here.
+SYSTEM_PROMPT = get_prompt("legacy_rewriter_prompt")
 
 
 class Rewriter:

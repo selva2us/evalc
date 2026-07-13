@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Settings &mdash; Curriculum Architect{% endblock %}
+{% block content %}
+
+<section class="admin-header">
+  <p class="eyebrow">Admin</p>
+  <h1>Environment Settings</h1>
+  <p class="hero-sub">
+    Anthropic keys/models and curriculum backend connection details. Changes here
+    take effect immediately &mdash; no restart needed &mdash; and are written to
+    <code>.env</code> so they survive one.
+  </p>
+</section>
+
+<nav class="admin-tabs">
+  <a href="{{ url_for('admin.settings') }}" class="active">Settings</a>
+  <a href="{{ url_for('admin.cookies') }}">Cookies</a>
+  <a href="{{ url_for('admin.prompts') }}">Prompts</a>
+</nav>
+
+{% for group_name, rows in grouped_settings.items() %}
+<div class="settings-group">
+  <h2>{{ group_name }}</h2>
+  {% for row in rows %}
+  <div class="setting-row">
+    <div class="setting-row-top">
+      <div>
+        <span class="status-dot {{ 'on' if row.configured else 'off' }}"></span>
+        <span class="setting-label">{{ row.label }}</span>
+      </div>
+      <span class="setting-value">{{ row.masked_value }}</span>
+    </div>
+    {% if row.help_text %}<p class="field-help">{{ row.help_text }}</p>{% endif %}
+    <form class="setting-form" method="post" action="{{ url_for('admin.settings_update') }}">
+      <input type="hidden" name="key" value="{{ row.key }}">
+      {% if row.secret %}
+        <input type="password" name="value" placeholder="{{ row.placeholder or ('New ' + row.label) }}" autocomplete="off">
+      {% else %}
+        <input type="text" name="value" placeholder="{{ row.placeholder or ('New ' + row.label) }}" autocomplete="off">
+      {% endif %}
+      <button type="submit" class="btn-small">Save</button>
+    </form>
+    {% if row.configured %}
+    <form method="post" action="{{ url_for('admin.settings_clear') }}" style="margin-top: 0.5rem;">
+      <input type="hidden" name="key" value="{{ row.key }}">
+      <button type="submit" class="btn-small btn-danger">Clear</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+
+{% endblock %}

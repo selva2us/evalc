@@ -89,13 +89,18 @@ cp .env.example .env
 | Variable | Used by | Required |
 |---|---|---|
 | `SECRET_KEY` | Flask sessions/flash | recommended |
-| `ANTHROPIC_API_KEY` | both tools | yes |
+| `APP_USERNAME`, `APP_PASSWORD` | Login (see below) | no -- app is open (as before) until both are set |
+| `ANTHROPIC_API_KEY` | both tools | no -- falls back to Demo Mode (see below) |
 | `ANTHROPIC_MODEL` | Architect tool | no (default `claude-sonnet-5`) |
 | `DATABASE_URL` | Architect tool | no (default local SQLite) |
 | `BASE_URL` | AI Pipeline (your curriculum backend) | yes, to use `/pipeline` |
 | `API_TOKEN` | AI Pipeline (bearer token) | yes, to use `/pipeline` |
 | `API_COOKIE_FILE` | AI Pipeline (optional session cookie) | no |
 | `SKELETON_MODEL`, `CONTENT_MODEL` | AI Pipeline | no |
+
+`ANTHROPIC_API_KEY`, `BASE_URL`, `API_TOKEN`, and the model settings can all
+also be set later through `/admin/settings` after logging in, instead of
+editing `.env` by hand -- see "Admin: Settings, Cookies, and Prompts" below.
 
 The Architect tool (`/`, `/history`, `/api/*`) works with just
 `ANTHROPIC_API_KEY`. The AI Pipeline (`/pipeline/*`) also needs
@@ -251,6 +256,112 @@ Note: Demo Mode only covers **content generation** (the Anthropic calls).
 Submitting/uploading to your curriculum backend still uses the real
 `BASE_URL`/`API_TOKEN` you configure for `/pipeline` and `/pipeline/assets`
 -- that integration is unrelated to Anthropic and wasn't touched.
+
+## Login
+
+The whole app can sit behind a login screen (`app/auth.py`), gated by a
+single app-wide `before_request` hook -- no existing route, view function,
+or template had to change to get this. Credentials come from environment
+variables, never hardcoded:
+
+```env
+APP_USERNAME=admin
+APP_PASSWORD=supersecretpassword
+SESSION_LIFETIME_MINUTES=480   # optional, defaults to 8 hours
+```
+
+**Opt-in, by design:** if `APP_USERNAME`/`APP_PASSWORD` aren't both set, the
+login gate is skipped entirely and the app behaves exactly as it did before
+this feature existed -- open, no login required. This is deliberate:
+upgrading shouldn't silently lock an existing deployment out of its own
+app. Configuring both env vars *is* what turns login on. Once both are set:
+
+- Every route requires a logged-in session; unauthenticated `GET` requests
+  redirect to `/login?next=<original path>`.
+- A successful login sets a permanent, signed Flask session cookie that
+  expires after `SESSION_LIFETIME_MINUTES` of inactivity (sliding window --
+  each request resets the clock) or on explicit logout.
+- Credentials are compared with `hmac.compare_digest` (constant-time, avoids
+  leaking match-length via response timing).
+- "Log out" appears in the top nav and posts to `/logout`, which clears the
+  session outright.
+
+## Admin: Settings, Cookies, and Prompts
+
+Once logged in, three admin pages appear in the top nav:
+
+**`/admin/settings`** -- view/update the runtime configuration values below.
+Values are masked (`sk-a••••••••7890`) once configured; secret fields render
+as password inputs. Saving a value writes it to `os.environ`,
+`current_app.config`, *and* the project's `.env` file, all in the same
+request -- so a change is live immediately (no restart) and still there
+after one. This is what makes "add a real `ANTHROPIC_API_KEY` and it just
+works" possible without touching a terminal at all:
+
+| Setting | Used by |
+|---|---|
+| `ANTHROPIC_API_KEY` | Both tools -- the shared Anthropic credential |
+| `ANTHROPIC_MODEL` | Architect tool |
+| `SKELETON_MODEL` / `CONTENT_MODEL` | AI Pipeline / Asset Studio |
+| `DEMO_MODE` | Both -- see Demo Mode above |
+| `BASE_URL` / `API_TOKEN` | Curriculum backend (AI Pipeline/Asset Studio submission) |
+
+Adding a future AI provider key or config value is a one-line addition to
+`SETTINGS_FIELDS` in `app/services/settings_service.py` -- no route or
+template changes needed.
+
+**`/admin/cookies`** -- manage `CF_AppSession`, `CF_Authorization`, and
+`cf_clearance`, for curriculum backends that sit behind Cloudflare Access /
+Bot Management. Add, update, delete, or clear all; the page only ever shows
+*whether* a cookie is configured and when it was last updated, never the
+value itself. Saving regenerates `cookies.txt` (one `NAME=VALUE` per line),
+which `elluval_pipeline/config.py`'s existing `API_COOKIE_FILE` mechanism
+already reads into the `Cookie` header sent on every curriculum-backend
+request -- that mechanism predates this feature and was only extended
+(backward-compatibly) to also accept this multi-line format, in addition to
+the single raw cookie string it already supported.
+
+**`/admin/prompts`** -- view and edit the centralized system prompt files
+directly (see below), with edits taking effect on the very next generation
+call (the in-memory prompt cache is cleared on save).
+
+## Centralized prompt management
+
+Every system prompt used anywhere in the suite -- the Architect tool, the
+AI Pipeline (skeleton + page content), Asset Studio (FAQs, example/practice
+programs, overviews, flashcards, quizzes), and even the legacy PDF-based
+flow -- lives as a plain-text file under `prompts/`, not hardcoded inside
+services, routes, or pipeline files:
+
+```text
+prompts/
+├── curriculum_system_prompt.txt   Architect tool skeleton prompt
+├── skeleton_prompt.txt            AI Pipeline skeleton prompt
+├── content_generation_prompt.txt  AI Pipeline page content prompt
+├── faq_prompt.txt
+├── program_prompt.txt             shared by example + practice programs
+├── overview_prompt.txt            shared by chapter/module/pillar overviews
+├── flashcard_prompt.txt
+├── quiz_prompt.txt
+├── legacy_rewriter_prompt.txt         legacy PDF-flow content prompt
+└── legacy_pillar_grouping_prompt.txt  legacy PDF-flow pillar grouping prompt
+```
+
+`elluval_pipeline/prompts.py` is the loader (`get_prompt(name, **kwargs)`),
+used by every one of the files above instead of an inline string constant.
+This was a pure relocation -- every prompt's exact wording was verified
+byte-for-byte identical to what was previously hardcoded, so no generation
+behavior changed for existing users. Prompts are cached in-process (they're
+requested on every single generation call); the admin Prompts page clears
+that cache on save so edits apply immediately.
+
+Dynamic prompts use `$identifier` placeholders (Python's `string.Template`,
+via `safe_substitute`) rather than `str.format()`, because several prompts
+instruct the model to respond in a literal JSON `{...}` shape -- `.format()`
+would choke on those braces or require an unreadable amount of escaping.
+`$-`-style substitution ignores plain `{ }` entirely, which is also what
+makes the prompt files safe for a non-developer to edit directly through
+`/admin/prompts` without needing to understand Python string formatting.
 
 ## API usage (Architect tool)
 

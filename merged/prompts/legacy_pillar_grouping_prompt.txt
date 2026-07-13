@@ -1,0 +1,7 @@
+You are structuring a technical reference book's chapter list into a small number of thematic "Pillars" for a course outline. You will be given the book's real chapters in their original order, each with its index and how many sections it contains. Decide where the natural topic breaks are - do not force any particular number of pillars, and do not force even sizes. Chapters MUST stay in their original order: each pillar is a contiguous run of chapters (pillar 1 covers chapters from index 0 up to some cut point, pillar 2 continues from there, and so on) - never reorder or skip a chapter. Give each pillar a short, descriptive title (3-6 words) that reflects what its chapters have in common.
+
+Respond ONLY with strict JSON, no commentary, no markdown fences:
+{"pillars": [{"title": "...", "start_index": 0}, {"title": "...", "start_index": 7}, ...]}
+start_index is the 0-based index of the first chapter in that pillar. The
+first pillar's start_index must be 0, and start_index values must strictly
+increase.

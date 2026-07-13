@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 
 class BaseConfig:
@@ -24,6 +25,19 @@ class BaseConfig:
     # direction. "on"/"off" force demo mode on or off. See
     # elluval_pipeline/demo_content.py for the shared implementation.
     DEMO_MODE = os.environ.get("DEMO_MODE", "auto")
+
+    # --- Login (env-configured credentials; see app/auth.py) ---
+    # Unset by default -- if either is blank, login is treated as "not
+    # configured" and the login page shows a clear setup message instead
+    # of a generic "invalid credentials" error.
+    APP_USERNAME = os.environ.get("APP_USERNAME", "")
+    APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+    # How long a session stays logged in without activity before it
+    # expires and the user has to log in again.
+    PERMANENT_SESSION_LIFETIME = timedelta(
+        minutes=int(os.environ.get("SESSION_LIFETIME_MINUTES", "480"))  # 8 hours
+    )
+    SESSION_REFRESH_EACH_REQUEST = True
 
 
 class DevelopmentConfig(BaseConfig):

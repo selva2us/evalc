@@ -25,6 +25,7 @@ import re
 from anthropic import Anthropic
 
 from . import demo_content
+from .prompts import get_prompt
 
 ASSET_TYPES = {
     "faq": "FAQ",
@@ -77,17 +78,8 @@ def _ask_json(cfg, system: str, user: str, max_tokens: int = 3000) -> dict:
 #    {"title": "FAQs", "sections": [...]})
 # ---------------------------------------------------------------------
 def generate_faq(title: str, breadcrumb: str, cfg) -> dict:
-    system = (
-        "You write FAQ pages for an online technical course. Given a "
-        "breadcrumb describing one unit of the curriculum (could be a "
-        "page, chapter, module, or pillar), write a thorough FAQ page "
-        "covering: beginner questions, intermediate questions, advanced "
-        "questions, a real-world scenario question, an interview-style "
-        "question, and a common-misconceptions question. Group them under "
-        "clear <h2> headings. Respond ONLY with strict JSON, no markdown "
-        'fences, no commentary: {"faq_html": "<full HTML string with '
-        'headings and <details>/<p> style Q&A pairs>"}'
-    )
+    # Prompt text lives in prompts/faq_prompt.txt (see elluval_pipeline/prompts.py).
+    system = get_prompt("faq_prompt")
     if getattr(cfg, "is_demo_mode", False):
         generated = demo_content.generate_demo_faq(title, breadcrumb)
     else:
@@ -109,21 +101,9 @@ def _generate_program(title: str, breadcrumb: str, cfg, program_type: str) -> di
         "industry-style" if program_type == "EXAMPLE" else
         "beginner, intermediate, advanced, and a challenge problem"
     )
-    system = (
-        f"You write {'a worked example' if program_type == 'EXAMPLE' else 'a practice exercise'} "
-        f"program for a technical course, at one of these difficulty tiers "
-        f"({difficulty_hint}) -- pick whichever tier best fits the topic's "
-        "place in the curriculum. Given a breadcrumb describing the "
-        "chapter/page, respond ONLY with strict JSON, no markdown fences, "
-        "no commentary, in this exact shape: "
-        '{"title": "...", "description": "...", "language": "...", '
-        '"starterCode": "...", "solutionCode": "..."}. '
-        "description should include the problem statement and, for a "
-        "worked example, an explanation of the approach and expected "
-        "output; for a practice exercise, include input/output examples, "
-        "constraints, and a hint (but not the full solution) in "
-        "description, and put the working solution in solutionCode."
-    )
+    role_label = "a worked example" if program_type == "EXAMPLE" else "a practice exercise"
+    # Prompt text lives in prompts/program_prompt.txt (see elluval_pipeline/prompts.py).
+    system = get_prompt("program_prompt", role_label=role_label, difficulty_hint=difficulty_hint)
     if getattr(cfg, "is_demo_mode", False):
         generated = demo_content.generate_demo_program(title, breadcrumb, program_type)
     else:
@@ -157,14 +137,8 @@ def generate_practice_program(title: str, breadcrumb: str, cfg) -> dict:
 #    {"overviewSummary","overviewHtml","overviewPublished","overviewHighlights"}
 # ---------------------------------------------------------------------
 def _generate_overview(level_name: str, title: str, breadcrumb: str, cfg, extra_fields: str) -> dict:
-    system = (
-        f"You write the overview for a {level_name} of a technical "
-        f"curriculum. Given a breadcrumb describing it, respond ONLY with "
-        f"strict JSON, no markdown fences, no commentary, in this exact "
-        f'shape: {{"summary": "1-2 sentence summary", "html": "<full HTML '
-        f'overview covering {extra_fields}>", "highlights": ["short '
-        f'highlight phrase", "..."]}}'
-    )
+    # Prompt text lives in prompts/overview_prompt.txt (see elluval_pipeline/prompts.py).
+    system = get_prompt("overview_prompt", level_name=level_name, extra_fields=extra_fields)
     if getattr(cfg, "is_demo_mode", False):
         generated = demo_content.generate_demo_overview(level_name, title, breadcrumb)
     else:
@@ -207,14 +181,8 @@ def generate_pillar_overview(title: str, breadcrumb: str, cfg) -> dict:
 #    [{"frontText": "...", "backText": "..."}, ...]   (payload is a LIST)
 # ---------------------------------------------------------------------
 def generate_flashcards(title: str, breadcrumb: str, cfg, count: int = 12) -> list:
-    system = (
-        f"You write spaced-repetition flashcards for a technical course "
-        f"unit. Given a breadcrumb, generate {count} flashcards covering "
-        "key definitions, terminology, formulas, concepts, and best "
-        "practices, spanning easy/medium/hard difficulty. Respond ONLY "
-        "with strict JSON, no markdown fences, no commentary, in this "
-        'exact shape: {"cards": [{"front": "...", "back": "..."}, ...]}'
-    )
+    # Prompt text lives in prompts/flashcard_prompt.txt (see elluval_pipeline/prompts.py).
+    system = get_prompt("flashcard_prompt", count=count)
     if getattr(cfg, "is_demo_mode", False):
         generated = demo_content.generate_demo_flashcards(title, breadcrumb, count)
     else:
@@ -230,23 +198,8 @@ def generate_flashcards(title: str, breadcrumb: str, cfg, count: int = 12) -> li
 #    {"title","passPercent","published","questions":[...]}
 # ---------------------------------------------------------------------
 def generate_module_quiz(title: str, breadcrumb: str, cfg, num_questions: int = 10) -> dict:
-    system = (
-        f"You write a {num_questions}-question assessment quiz for a "
-        "technical course module. Given a breadcrumb, generate a mix of "
-        "multiple-choice, true/false, scenario, code-output, "
-        "architecture, and best-practice questions, roughly 40% "
-        "beginner, 40% intermediate, 20% advanced. Respond ONLY with "
-        "strict JSON, no markdown fences, no commentary, in this exact "
-        'shape: {"questions": [{"prompt": "...", "questionType": '
-        '"SINGLE_CHOICE", "codeSnippet": "", "codeLanguage": "", '
-        '"options": [{"label": "...", "correct": true}, {"label": "...", '
-        '"correct": false}], "explanation": "...", "difficulty": '
-        '"BEGINNER"}, ...]}. Use questionType "SINGLE_CHOICE" for '
-        "multiple-choice/true-false/scenario/best-practice questions, "
-        "and fill codeSnippet + codeLanguage for code-output/architecture "
-        "questions that show a snippet (leave both empty strings "
-        "otherwise)."
-    )
+    # Prompt text lives in prompts/quiz_prompt.txt (see elluval_pipeline/prompts.py).
+    system = get_prompt("quiz_prompt", num_questions=num_questions)
     if getattr(cfg, "is_demo_mode", False):
         generated = demo_content.generate_demo_quiz(title, breadcrumb, num_questions)
     else:

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Prompts &mdash; Curriculum Architect{% endblock %}
+{% block content %}
+
+<section class="admin-header">
+  <p class="eyebrow">Admin</p>
+  <h1>System Prompts</h1>
+  <p class="hero-sub">
+    Every Anthropic system prompt used across the Architect tool, AI Pipeline, and
+    Asset Studio lives in <code>prompts/*.txt</code> and loads from here &mdash; nothing
+    is hardcoded in the services/routes/pipeline files. Edits take effect on the
+    next generation call, no restart needed. Dynamic prompts use
+    <code>$identifier</code> placeholders (e.g. <code>$technology_name</code>) rather
+    than curly braces, since several prompts instruct the model to respond in a
+    literal JSON <code>{ }</code> shape.
+  </p>
+</section>
+
+<nav class="admin-tabs">
+  <a href="{{ url_for('admin.settings') }}">Settings</a>
+  <a href="{{ url_for('admin.cookies') }}">Cookies</a>
+  <a href="{{ url_for('admin.prompts') }}" class="active">Prompts</a>
+</nav>
+
+{% if names %}
+<div class="prompt-layout">
+  <div class="prompt-list">
+    {% for name in names %}
+      <a href="{{ url_for('admin.prompts', name=name) }}" class="{{ 'active' if name == selected else '' }}">{{ name }}.txt</a>
+    {% endfor %}
+  </div>
+  <div class="prompt-editor">
+    {% if selected %}
+    <form method="post" action="{{ url_for('admin.prompts_update') }}">
+      <input type="hidden" name="name" value="{{ selected }}">
+      <textarea name="content" spellcheck="false">{{ content }}</textarea>
+      <div class="prompt-editor-actions">
+        <button type="submit" class="btn-primary">Save {{ selected }}.txt</button>
+      </div>
+    </form>
+    {% else %}
+    <p class="empty-state">Select a prompt file to view/edit it.</p>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<p class="empty-state">No prompt files found under <code>prompts/</code>.</p>
+{% endif %}
+
+{% endblock %}

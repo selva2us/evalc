@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Cookies &mdash; Curriculum Architect{% endblock %}
+{% block content %}
+
+<section class="admin-header">
+  <p class="eyebrow">Admin</p>
+  <h1>Cookie Management</h1>
+  <p class="hero-sub">
+    Some curriculum backends sit behind Cloudflare Access / Bot Management and need
+    these cookies on every request. Values are stored server-side and never shown
+    again once saved &mdash; only whether each one is configured. Saving regenerates
+    <code>cookies.txt</code>, which the AI Pipeline already reads on every request.
+  </p>
+</section>
+
+<nav class="admin-tabs">
+  <a href="{{ url_for('admin.settings') }}">Settings</a>
+  <a href="{{ url_for('admin.cookies') }}" class="active">Cookies</a>
+  <a href="{{ url_for('admin.prompts') }}">Prompts</a>
+</nav>
+
+<div class="cookie-grid">
+  {% for row in cookie_status %}
+  <div class="cookie-row">
+    <div class="cookie-row-top">
+      <div>
+        <span class="status-dot {{ 'on' if row.configured else 'off' }}"></span>
+        <span class="cookie-name">{{ row.name }}</span>
+      </div>
+      {% if row.configured %}
+      <form method="post" action="{{ url_for('admin.cookies_delete') }}">
+        <input type="hidden" name="name" value="{{ row.name }}">
+        <button type="submit" class="btn-small btn-danger">Delete</button>
+      </form>
+      {% endif %}
+    </div>
+    {% if row.configured %}
+      <p class="cookie-meta">Configured{% if row.updated_at %} &middot; last updated {{ row.updated_at }}{% endif %}</p>
+    {% else %}
+      <p class="cookie-meta">Not configured</p>
+    {% endif %}
+    <form class="setting-form" method="post" action="{{ url_for('admin.cookies_update') }}">
+      <input type="hidden" name="name" value="{{ row.name }}">
+      <input type="password" name="value" placeholder="New value for {{ row.name }}" autocomplete="off">
+      <button type="submit" class="btn-small">Save</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+
+<form method="post" action="{{ url_for('admin.cookies_clear_all') }}"
+      onsubmit="return confirm('Clear all configured cookies? This cannot be undone.');">
+  <button type="submit" class="btn-small btn-danger">Clear All Cookies</button>
+</form>
+
+{% endblock %}

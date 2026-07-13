@@ -135,11 +135,33 @@ class Config:
         return demo_content.resolve_demo_mode(self.anthropic_api_key, self.demo_mode)
 
 
+def _read_cookie_file(path: Path) -> str:
+    """Build the raw Cookie header value from API_COOKIE_FILE.
+
+    Historically this file held one raw, already-`; `-joined cookie
+    string (e.g. copied from browser devtools), possibly with a stray
+    trailing newline -- hence the original newline-stripping behavior,
+    preserved below for that case.
+
+    The admin Cookies page (see elluval_pipeline/cookie_store.py) writes
+    a more human-editable "NAME=VALUE" per line format instead. Detect
+    that shape and join it into a valid Cookie header ("NAME=VALUE; ...")
+    rather than concatenating it into garbage. Either format works
+    interchangeably; nothing about existing single-line cookie files
+    changes.
+    """
+    if not path.exists():
+        return ""
+    raw = path.read_text()
+    lines = [ln.strip() for ln in raw.replace("\r", "").split("\n") if ln.strip()]
+    if len(lines) > 1 and all("=" in ln for ln in lines):
+        return "; ".join(lines)
+    return raw.replace("\r", "").replace("\n", "").strip()
+
+
 def load_config(subject_id: str | None = None) -> Config:
     cookie_path = Path(os.environ.get("API_COOKIE_FILE", "cookies.txt"))
-    cookie = ""
-    if cookie_path.exists():
-        cookie = cookie_path.read_text().replace("\r", "").replace("\n", "").strip()
+    cookie = _read_cookie_file(cookie_path)
 
     work_dir = Path(os.environ.get("WORK_DIR", "./work")).resolve()
     work_dir.mkdir(parents=True, exist_ok=True)

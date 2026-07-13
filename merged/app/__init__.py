@@ -39,11 +39,22 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.routes.api import api_bp
     from app.routes.pipeline import pipeline_bp
     from app.routes.assets import assets_bp
+    from app.routes.admin import admin_bp
+    from app.auth import auth_bp, require_login
 
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(pipeline_bp, url_prefix="/pipeline")
     app.register_blueprint(assets_bp, url_prefix="/pipeline/assets")
+    app.register_blueprint(admin_bp, url_prefix="/admin")
+    app.register_blueprint(auth_bp)
+
+    # ---- Login gate ----------------------------------------------------
+    # A single app-wide hook protects every route registered above (and
+    # any added later) without touching their view functions. See
+    # app/auth.py for exactly what's exempted (the login page itself and
+    # static files) and how session expiration works.
+    app.before_request(require_login)
 
     # ---- Demo Mode banner --------------------------------------------
     # Both tools share ANTHROPIC_API_KEY/DEMO_MODE, so a single app-wide
@@ -58,6 +69,14 @@ def create_app(config_name: str | None = None) -> Flask:
             app.config.get("ANTHROPIC_API_KEY"), app.config.get("DEMO_MODE", "auto")
         )
         return {"demo_mode_active": demo_active}
+
+    @app.context_processor
+    def inject_auth_state():
+        from app.auth import is_authenticated, login_is_configured
+        return {
+            "is_authenticated": is_authenticated(),
+            "login_configured": login_is_configured(),
+        }
 
     with app.app_context():
         try:

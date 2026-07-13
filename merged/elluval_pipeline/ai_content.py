@@ -31,32 +31,11 @@ from pathlib import Path
 from anthropic import Anthropic
 
 from . import demo_content
+from .prompts import get_prompt
 
-SYSTEM_PROMPT = """You are an instructional designer writing original teaching \
-material for a structured online course. You will be given the full \
-breadcrumb (Pillar > Module > Chapter > Page) for one page, plus the \
-overall technology the course is about. Write complete, original content \
-for that page: assume no other source text exists, so explain the concept \
-thoroughly and accurately from your own knowledge. Keep the explanation \
-focused on exactly what the page title promises, consistent with its place \
-in the surrounding hierarchy (don't repeat what a sibling page would cover). \
-Use clear, plain English suitable for a motivated learner moving from \
-beginner toward professional competency. Add: a short intro, a clear \
-explanation, a bulleted "Key Points" summary, and if relevant a short \
-"Quick Recap" for memorization. If the page is the kind of topic that \
-benefits from a code example (syntax, APIs, patterns, configuration, \
-commands), include ONE original, runnable-looking example illustrating it. \
-If the page is conceptual/architectural/historical and a code example would \
-be artificial, set "code" to null rather than forcing one in. Respond ONLY \
-with strict JSON, no markdown fences, no commentary, in this exact shape:
-{
-  "intro_html": "<p>...</p>",
-  "explanation_html": "<div>...</div>",
-  "code": {"language": "...", "value": "..."} or null,
-  "key_points": ["...", "..."],
-  "quick_recap_html": "<div>...</div>" or null
-}
-"""
+# Prompt text lives in prompts/content_generation_prompt.txt (see
+# elluval_pipeline/prompts.py) rather than hardcoded here.
+SYSTEM_PROMPT = get_prompt("content_generation_prompt")
 
 
 def _breadcrumb_context(skeleton: dict):
