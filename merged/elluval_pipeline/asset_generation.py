@@ -22,9 +22,8 @@ from __future__ import annotations
 import json
 import re
 
-from anthropic import Anthropic
-
 from . import demo_content
+from .llm_providers import complete
 from .prompts import get_prompt
 
 ASSET_TYPES = {
@@ -53,22 +52,15 @@ APPLICABLE_LEVELS = {
 }
 
 
-def _client(cfg) -> Anthropic:
-    if not cfg.anthropic_api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY is required for asset generation.")
-    return Anthropic(api_key=cfg.anthropic_api_key)
-
-
-def _model(cfg) -> str:
-    return getattr(cfg, "content_model", None) or "claude-sonnet-4-6"
-
-
 def _ask_json(cfg, system: str, user: str, max_tokens: int = 3000) -> dict:
-    resp = _client(cfg).messages.create(
-        model=_model(cfg), max_tokens=max_tokens, system=system,
-        messages=[{"role": "user", "content": user}],
+    text = complete(
+        cfg.provider,
+        cfg.active_api_key,
+        getattr(cfg, "content_model", None),
+        system=system,
+        user=user,
+        max_tokens=max_tokens,
     )
-    text = "".join(b.text for b in resp.content if b.type == "text")
     text = re.sub(r"^```json|```$", "", text.strip(), flags=re.MULTILINE).strip()
     return json.loads(text)
 
@@ -234,3 +226,87 @@ GENERATORS = {
     "flashcards": generate_flashcards,
     "module_quiz": generate_module_quiz,
 }
+
+
+# ---------------------------------------------------------------------
+# Shared hierarchy helpers -- used by both the manual Asset Studio
+# (app/routes/assets.py) and the fully-automatic generator
+# (full_generation.py) so the node-key / breadcrumb conventions and the
+# "which level does this asset type's endpoint actually need" mapping
+# only exist in one place.
+# ---------------------------------------------------------------------
+
+# Which hierarchy level's id each asset type's endpoint actually needs,
+# regardless of which level(s) it can conceptually be generated for.
+# `None` means "the node's own id at whatever level it is" (FAQ reuses
+# the regular page-content endpoint at any level it's attached to).
+TARGET_LEVEL = {
+    "faq": None,
+    "example_program": "chapter",
+    "practice_program": "chapter",
+    "chapter_overview": "chapter",
+    "module_overview": "module",
+    "pillar_overview": "pillar",
+    "flashcards": "module",
+    "module_quiz": "module",
+}
+
+
+def hierarchy_nodes(skeleton: dict) -> list[dict]:
+    """Every pillar/module/chapter/page in document order, level-prefixed
+    keys (so they can't collide with ai_content.py's plain numeric page
+    keys), plus enough parent-title context to resolve a submission
+    target for asset types whose endpoint is scoped to a coarser level
+    than the node the asset conceptually belongs to (e.g. a page-level
+    example program still POSTs to its chapter's endpoint)."""
+    technology = skeleton.get("technology_name", "")
+    nodes = []
+    for pi, pillar in enumerate(skeleton["pillars"], start=1):
+        pillar_title = pillar["title"]
+        nodes.append({
+            "level": "pillar", "key": f"pillar-{pi:03d}", "title": pillar_title,
+            "breadcrumb": f"Technology: {technology}\nPillar: {pillar_title}",
+            "parent_pillar_title": None,
+            "parent_module_title": None, "parent_chapter_title": None,
+        })
+        for mi, mod in enumerate(pillar["modules"], start=1):
+            module_title = mod["title"]
+            nodes.append({
+                "level": "module", "key": f"module-{pi:03d}-{mi:03d}", "title": module_title,
+                "breadcrumb": f"Technology: {technology}\nPillar: {pillar_title}\nModule: {module_title}",
+                "parent_pillar_title": pillar_title,
+                "parent_module_title": None, "parent_chapter_title": None,
+            })
+            for ci, chap in enumerate(mod["chapters"], start=1):
+                chapter_title = chap["title"]
+                nodes.append({
+                    "level": "chapter", "key": f"chapter-{pi:03d}-{mi:03d}-{ci:03d}", "title": chapter_title,
+                    "breadcrumb": f"Technology: {technology}\nPillar: {pillar_title}\nModule: {module_title}\nChapter: {chapter_title}",
+                    "parent_pillar_title": pillar_title,
+                    "parent_module_title": module_title, "parent_chapter_title": None,
+                })
+                for gi, page in enumerate(chap["pages"], start=1):
+                    page_title = page["title"]
+                    nodes.append({
+                        "level": "page", "key": f"page-{pi:03d}-{mi:03d}-{ci:03d}-{gi:03d}", "title": page_title,
+                        "breadcrumb": f"Technology: {technology}\nPillar: {pillar_title}\nModule: {module_title}\nChapter: {chapter_title}\nPage: {page_title}",
+                        "parent_pillar_title": pillar_title,
+                        "parent_module_title": module_title, "parent_chapter_title": chapter_title,
+                    })
+    return nodes
+
+
+def nearest_target_title(asset_type: str, node: dict) -> str | None:
+    """Resolve which node's title should be looked up in the title->id
+    map to get the id that asset_type's endpoint actually needs, given
+    a node dict from hierarchy_nodes()."""
+    needed = TARGET_LEVEL[asset_type]
+    if needed is None or node["level"] == needed:
+        return node["title"]
+    if needed == "chapter":
+        return node.get("parent_chapter_title")
+    if needed == "module":
+        return node.get("parent_module_title") if node["level"] != "module" else node["title"]
+    if needed == "pillar":
+        return node.get("parent_pillar_title") if node["level"] != "pillar" else node["title"]
+    return None

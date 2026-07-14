@@ -39,6 +39,7 @@ def create_app(config_name: str | None = None) -> Flask:
     from app.routes.api import api_bp
     from app.routes.pipeline import pipeline_bp
     from app.routes.assets import assets_bp
+    from app.routes.hub import hub_bp
     from app.routes.admin import admin_bp
     from app.auth import auth_bp, require_login
 
@@ -46,6 +47,7 @@ def create_app(config_name: str | None = None) -> Flask:
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(pipeline_bp, url_prefix="/pipeline")
     app.register_blueprint(assets_bp, url_prefix="/pipeline/assets")
+    app.register_blueprint(hub_bp, url_prefix="/pipeline/hub")
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(auth_bp)
 
@@ -57,18 +59,24 @@ def create_app(config_name: str | None = None) -> Flask:
     app.before_request(require_login)
 
     # ---- Demo Mode banner --------------------------------------------
-    # Both tools share ANTHROPIC_API_KEY/DEMO_MODE, so a single app-wide
-    # flag (available in every template, since they all extend base.html)
-    # is enough to show a "Demo Mode" banner whenever real Anthropic
+    # Both tools share LLM_PROVIDER/DEMO_MODE, so a single app-wide flag
+    # (available in every template, since they all extend base.html) is
+    # enough to show a "Demo Mode" banner whenever the *active* provider's
     # credentials aren't configured. Purely informational -- doesn't
     # affect routing or generation logic, which is decided independently
     # per call site (see elluval_pipeline/demo_content.py).
     @app.context_processor
     def inject_demo_mode():
+        provider = app.config.get("LLM_PROVIDER", "anthropic")
+        api_key_config_key = {
+            "anthropic": "ANTHROPIC_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "gemini": "GEMINI_API_KEY",
+        }.get(provider, "ANTHROPIC_API_KEY")
         demo_active = resolve_demo_mode(
-            app.config.get("ANTHROPIC_API_KEY"), app.config.get("DEMO_MODE", "auto")
+            app.config.get(api_key_config_key), app.config.get("DEMO_MODE", "auto")
         )
-        return {"demo_mode_active": demo_active}
+        return {"demo_mode_active": demo_active, "active_llm_provider": provider}
 
     @app.context_processor
     def inject_auth_state():

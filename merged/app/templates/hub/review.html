@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ asset_type_label }} — {{ node_title }}{% endblock %}
+{% block content %}
+
+<section class="result-header">
+  <p class="eyebrow">Curriculum Hub &mdash; {{ asset_type_label }} ({{ node_level }}: {{ node_title }})</p>
+  <h1>{{ asset_type_label }}</h1>
+  <pre style="white-space: pre-wrap; font-size: 0.85rem; opacity: 0.75; margin: 0.5rem 0 0;">{{ breadcrumb }}</pre>
+  <p style="font-size:0.85rem; opacity:0.7;">Status: {{ status }}</p>
+</section>
+
+<section class="hero" style="margin-top: 1.5rem;">
+  <p class="hero-sub">
+    Edit the JSON below if needed, confirm the target ID (auto-filled from
+    the real subject tree), then approve to submit it{% if is_list_payload %}
+    (this one is a top-level list, not an object){% endif %}.
+  </p>
+
+  <form method="post" action="{{ url_for('hub.approve', run_id=run_id, asset_type=asset_type, node_key=node_key) }}" style="display:flex; flex-direction:column; gap:0.75rem;">
+    <label for="target_id">Target ID</label>
+    <input type="text" id="target_id" name="target_id" value="{{ target_id }}" placeholder="e.g. 1274" required autocomplete="off" style="max-width: 240px;">
+
+    <label for="payload_json" class="visually-hidden">Payload JSON</label>
+    <textarea id="payload_json" name="payload_json" rows="20" spellcheck="false" style="width:100%; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.85rem;">{{ payload_json }}</textarea>
+
+    <div class="action-row" style="gap:0.75rem;">
+      <button type="submit">Approve &amp; Submit</button>
+    </div>
+  </form>
+
+  <div class="action-row" style="margin-top:1rem; gap:1rem;">
+    <form method="post" action="{{ url_for('hub.regenerate', run_id=run_id, asset_type=asset_type, node_key=node_key) }}">
+      <button type="submit" style="background:transparent; border:1px solid currentColor;">Regenerate</button>
+    </form>
+    <form method="post" action="{{ url_for('hub.skip', run_id=run_id, asset_type=asset_type, node_key=node_key) }}">
+      <button type="submit" style="background:transparent; border:1px solid currentColor;">Skip (return later)</button>
+    </form>
+    <a href="{{ url_for('hub.board', run_id=run_id) }}">Back to Board</a>
+  </div>
+</section>
+
+{% endblock %}

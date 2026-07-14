@@ -31,94 +31,27 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from app.pipeline_config import work_dir_for
 from app.routes.pipeline import _load_pipeline, _load_run_meta
 from elluval_pipeline import asset_generation as ag
-from elluval_pipeline.api_client import CurriculumClient, collect_pages
+from elluval_pipeline.api_client import CurriculumClient, fetch_title_lookup
 
 assets_bp = Blueprint("assets", __name__)
 
 
 # ---------------------------------------------------------------------
-# Hierarchy + id-lookup helpers
+# Hierarchy + id-lookup helpers (shared with full_generation.py -- see
+# elluval_pipeline/asset_generation.py for hierarchy_nodes / TARGET_LEVEL /
+# nearest_target_title).
 # ---------------------------------------------------------------------
-def _hierarchy_nodes(skeleton: dict) -> list[dict]:
-    """Every pillar/module/chapter/page in document order, level-prefixed
-    keys (so they can't collide with ai_content.py's plain numeric page
-    keys), plus enough parent-title context to resolve a submission
-    target for asset types whose endpoint is scoped to a coarser level
-    than the node the asset conceptually belongs to (e.g. a page-level
-    example program still POSTs to its chapter's endpoint)."""
-    technology = skeleton.get("technology_name", "")
-    nodes = []
-    for pi, pillar in enumerate(skeleton["pillars"], start=1):
-        pillar_title = pillar["title"]
-        nodes.append({
-            "level": "pillar", "key": f"pillar-{pi:03d}", "title": pillar_title,
-            "breadcrumb": f"Technology: {technology}\nPillar: {pillar_title}",
-            "parent_module_title": None, "parent_chapter_title": None,
-        })
-        for mi, mod in enumerate(pillar["modules"], start=1):
-            module_title = mod["title"]
-            nodes.append({
-                "level": "module", "key": f"module-{pi:03d}-{mi:03d}", "title": module_title,
-                "breadcrumb": f"Technology: {technology}\nPillar: {pillar_title}\nModule: {module_title}",
-                "parent_module_title": None, "parent_chapter_title": None,
-            })
-            for ci, chap in enumerate(mod["chapters"], start=1):
-                chapter_title = chap["title"]
-                nodes.append({
-                    "level": "chapter", "key": f"chapter-{pi:03d}-{mi:03d}-{ci:03d}", "title": chapter_title,
-                    "breadcrumb": f"Technology: {technology}\nPillar: {pillar_title}\nModule: {module_title}\nChapter: {chapter_title}",
-                    "parent_module_title": module_title, "parent_chapter_title": None,
-                })
-                for gi, page in enumerate(chap["pages"], start=1):
-                    page_title = page["title"]
-                    nodes.append({
-                        "level": "page", "key": f"page-{pi:03d}-{mi:03d}-{ci:03d}-{gi:03d}", "title": page_title,
-                        "breadcrumb": f"Technology: {technology}\nPillar: {pillar_title}\nModule: {module_title}\nChapter: {chapter_title}\nPage: {page_title}",
-                        "parent_module_title": module_title, "parent_chapter_title": chapter_title,
-                    })
-    return nodes
-
-
-# Which hierarchy level's id each asset type's endpoint actually needs,
-# regardless of which level(s) it can conceptually be generated for.
-_TARGET_LEVEL = {
-    "faq": None,  # submits under the node's own id at whatever level it is
-    "example_program": "chapter",
-    "practice_program": "chapter",
-    "chapter_overview": "chapter",
-    "module_overview": "module",
-    "pillar_overview": "pillar",
-    "flashcards": "module",
-    "module_quiz": "module",
-}
-
-
-def _nearest_target_title(asset_type: str, node: dict) -> str | None:
-    needed = _TARGET_LEVEL[asset_type]
-    if needed is None or node["level"] == needed:
-        return node["title"]
-    if needed == "chapter":
-        return node.get("parent_chapter_title")
-    if needed == "module":
-        return node.get("parent_module_title") if node["level"] != "module" else node["title"]
-    return None
+_hierarchy_nodes = ag.hierarchy_nodes
+_TARGET_LEVEL = ag.TARGET_LEVEL
+_nearest_target_title = ag.nearest_target_title
 
 
 def _title_lookup(pipe, work_dir: Path) -> dict:
     """title(lowercased) -> id for every node in the real subject tree.
-    collect_pages() already walks the whole tree indiscriminately (any
-    dict with id+title, at any nesting level), so one flat lookup covers
-    pillars, modules, chapters, and pages alike. Cached to disk, shared
-    with page-content Review Mode's identical cache."""
-    cache_path = work_dir / "page_lookup.json"
-    if cache_path.exists():
-        return json.loads(cache_path.read_text())
+    Cached to disk (page_lookup.json), shared with page-content Review
+    Mode's and full_generation.py's identical cache."""
     client = CurriculumClient(pipe.cfg, pipe.logger)
-    tree = client.fetch_tree()
-    lookup: dict = {}
-    collect_pages(tree, lookup)
-    cache_path.write_text(json.dumps(lookup, indent=2))
-    return lookup
+    return fetch_title_lookup(client, work_dir)
 
 
 # ---------------------------------------------------------------------

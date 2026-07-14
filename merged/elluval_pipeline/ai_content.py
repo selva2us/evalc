@@ -28,9 +28,8 @@ import json
 import re
 from pathlib import Path
 
-from anthropic import Anthropic
-
 from . import demo_content
+from .llm_providers import complete
 from .prompts import get_prompt
 
 # Prompt text lives in prompts/content_generation_prompt.txt (see
@@ -62,34 +61,32 @@ def _breadcrumb_context(skeleton: dict):
 
 class ContentGenerator:
     def __init__(self, cfg, logger, model: str | None = None):
-        # Demo Mode: skip the Anthropic client entirely and serve
-        # deterministic mock page content. Reverts to the real client
-        # automatically once a real ANTHROPIC_API_KEY is configured.
+        # Demo Mode: skip the provider call entirely and serve
+        # deterministic mock page content. Reverts to the real call
+        # automatically once a real API key is configured for the active
+        # provider.
         self.demo_mode = getattr(cfg, "is_demo_mode", False)
+        self.cfg = cfg
         if self.demo_mode:
-            self.client = None
             logger.info(
-                "Demo Mode active (no Anthropic credentials configured) - "
-                "page content will be sample/mock content."
+                "Demo Mode active (no %s credentials configured) - "
+                "page content will be sample/mock content.", cfg.provider,
             )
-        else:
-            if not cfg.anthropic_api_key:
-                raise RuntimeError("ANTHROPIC_API_KEY is required for the content generation stage.")
-            self.client = Anthropic(api_key=cfg.anthropic_api_key)
-        self.model = model or getattr(cfg, "content_model", None) or "claude-sonnet-4-6"
+        self.model = model or getattr(cfg, "content_model", None)
         self.logger = logger
 
     def _call(self, title: str, breadcrumb: str) -> dict:
         if self.demo_mode:
             return demo_content.generate_demo_page_content(title, breadcrumb)
 
-        resp = self.client.messages.create(
-            model=self.model,
-            max_tokens=2000,
+        text = complete(
+            self.cfg.provider,
+            self.cfg.active_api_key,
+            self.model,
             system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": breadcrumb}],
+            user=breadcrumb,
+            max_tokens=3000,
         )
-        text = "".join(block.text for block in resp.content if block.type == "text")
         text = re.sub(r"^```json|```$", "", text.strip(), flags=re.MULTILINE).strip()
         try:
             return json.loads(text)

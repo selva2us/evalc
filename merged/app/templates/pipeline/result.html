@@ -13,8 +13,28 @@
       <div><dt>Run</dt><dd class="mono">{{ run_id }}</dd></div>
     </dl>
     <p class="hero-sub">
-      Syllabus submitted, page content generated, and uploaded successfully.
+      Syllabus submitted{% if summary %}, and the full curriculum was generated
+      and submitted{% else %}, page content generated, and uploaded
+      successfully{% endif %}.
     </p>
+    {% if summary %}
+      <dl class="meta-row">
+        {% for kind, count in summary.done.items() %}
+          <div><dt>{{ kind.replace('_', ' ')|title }}</dt><dd>{{ count }}</dd></div>
+        {% endfor %}
+      </dl>
+      {% if summary.failed %}
+        <div class="flash flash-error" style="margin-top: 1rem;">
+          <strong>{{ summary.failed|length }} item(s) failed</strong> and were skipped
+          (progress is checkpointed, so re-submitting this run will retry only these):
+          <ul>
+            {% for item in summary.failed %}
+              <li><strong>{{ item.kind.replace('_', ' ')|title }}</strong> &mdash; {{ item.title }}: {{ item.error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    {% endif %}
   {% else %}
     <p class="hero-sub flash flash-error">{{ error }}</p>
     <p class="hero-sub">

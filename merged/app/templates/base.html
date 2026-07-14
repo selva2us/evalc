@@ -21,6 +21,7 @@
       <a href="{{ url_for('main.index') }}">New</a>
       <a href="{{ url_for('main.history') }}">History</a>
       <a href="{{ url_for('pipeline.index') }}">AI Pipeline</a>
+      <a href="{{ url_for('hub.start') }}">Curriculum Hub</a>
       {% if is_authenticated or not login_configured %}
         <a href="{{ url_for('admin.settings') }}">Settings</a>
         <a href="{{ url_for('admin.cookies') }}">Cookies</a>
@@ -38,7 +39,7 @@
     {% if demo_mode_active %}
       <div class="demo-banner" role="status">
         <span class="demo-banner-tag">Demo Mode</span>
-        <span>No Anthropic API key configured &mdash; showing sample/mock content so you can preview the full workflow. Add <code>ANTHROPIC_API_KEY</code> to switch to real AI generation, no code changes needed.</span>
+        <span>No API key configured for the active provider ({{ active_llm_provider|default('anthropic') }}) &mdash; showing sample/mock content so you can preview the full workflow. Add a key in <a href="{{ url_for('admin.settings') }}">Settings</a> to switch to real AI generation, no code changes needed.</span>
       </div>
     {% endif %}
 

@@ -23,9 +23,8 @@ import webbrowser
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from anthropic import Anthropic
-
 from . import demo_content
+from .llm_providers import complete
 from .prompts import get_prompt
 
 # ---------------------------------------------------------------------------
@@ -78,12 +77,35 @@ def pillars_to_dict(pillars: list[SkeletonPillar]) -> list[dict]:
 # elluval_pipeline/prompts.py) rather than hardcoded here.
 # ---------------------------------------------------------------------------
 
-# Parses "# Pillar 3 – Title", "## Module 12 - Title", "### Chapter 2 - Title",
-# "Page 4 - Title". Both "-" and "–" are accepted since models mix them.
-PILLAR_RE = re.compile(r"^#\s*Pillar\s+(\d+)\s*[-–]\s*(.+)$", re.IGNORECASE)
-MODULE_RE = re.compile(r"^##\s*Module\s+(\d+)\s*[-–]\s*(.+)$", re.IGNORECASE)
-CHAPTER_RE = re.compile(r"^###\s*Chapter\s+(\d+)\s*[-–]\s*(.+)$", re.IGNORECASE)
-PAGE_RE = re.compile(r"^Page\s+(\d+)\s*[-–]\s*(.+)$", re.IGNORECASE)
+# Parses lines like "# Pillar 3 – Title", "## Module 12 - Title",
+# "### Chapter 2 - Title", "Page 4 - Title" -- but detection is keyword-
+# based (Pillar/Module/Chapter/Page), not dependent on exact "#"/"##"/"###"
+# heading depth, "-" vs "–" vs ":" separators, or "**bold**" wrapping.
+# This matters more now that the same prompt goes to multiple providers:
+# Claude tends to follow the "#"-heading-depth convention closely, but
+# GPT/Gemini sometimes use a colon instead of a dash, bold the whole line,
+# or drop the leading "#"s while still writing "Pillar N: Title" -- see
+# _clean_markdown_line() below, which normalizes all of that away before
+# these regexes ever see the line.
+PILLAR_RE = re.compile(r"^Pillar\s+(\d+)\s*[-–—:.]\s*(.+)$", re.IGNORECASE)
+MODULE_RE = re.compile(r"^Module\s+(\d+)\s*[-–—:.]\s*(.+)$", re.IGNORECASE)
+CHAPTER_RE = re.compile(r"^Chapter\s+(\d+)\s*[-–—:.]\s*(.+)$", re.IGNORECASE)
+PAGE_RE = re.compile(r"^Page\s+(\d+)\s*[-–—:.]\s*(.+)$", re.IGNORECASE)
+
+
+def _clean_markdown_line(line: str) -> str:
+    """Strip whatever the model wrapped a heading line in -- leading
+    '#'/'##'/'###' marks, a leading bullet ('-', '*', '•'), and '**bold**'
+    wrapping -- so PILLAR_RE etc. can match purely on the keyword
+    (Pillar/Module/Chapter/Page) regardless of which of those a given
+    provider happened to use for this line."""
+    line = line.strip()
+    line = re.sub(r"^#{1,6}\s*", "", line)
+    line = re.sub(r"^[-*•]\s+", "", line)
+    line = line.strip()
+    if line.startswith("**") and line.endswith("**") and len(line) > 4:
+        line = line[2:-2].strip()
+    return line.strip("*").strip()
 
 
 def build_prompt(technology_name: str, notes: str | None = None) -> str:
@@ -97,31 +119,31 @@ def build_prompt(technology_name: str, notes: str | None = None) -> str:
 
 
 def call_model(technology_name: str, notes: str | None, cfg, logger) -> str:
-    # Demo Mode: no ANTHROPIC_API_KEY (or DEMO_MODE forced on) -> serve a
-    # deterministic mock skeleton instead of failing. Automatically stops
-    # happening the moment a real key is configured (see
-    # demo_content.resolve_demo_mode / Config.is_demo_mode).
+    # Demo Mode: no usable API key for the active provider (or DEMO_MODE
+    # forced on) -> serve a deterministic mock skeleton instead of failing.
+    # Automatically stops happening the moment a real key is configured
+    # (see demo_content.resolve_demo_mode / Config.is_demo_mode).
     if getattr(cfg, "is_demo_mode", False):
         logger.info(
-            "Demo Mode active (no Anthropic credentials configured) - "
+            "Demo Mode active (no %s credentials configured) - "
             "generating a sample skeleton for '%s' instead of calling the API",
-            technology_name,
+            cfg.provider, technology_name,
         )
         return demo_content.generate_demo_skeleton_markdown(technology_name, notes)
 
-    if not cfg.anthropic_api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY is required to generate a skeleton.")
-
-    client = Anthropic(api_key=cfg.anthropic_api_key)
-    model = getattr(cfg, "skeleton_model", None) or "claude-sonnet-4-6"
-    logger.info("Requesting curriculum skeleton for '%s' from %s", technology_name, model)
-
-    resp = client.messages.create(
-        model=model,
-        max_tokens=8000,
-        messages=[{"role": "user", "content": build_prompt(technology_name, notes)}],
+    model = getattr(cfg, "skeleton_model", None)
+    logger.info(
+        "Requesting curriculum skeleton for '%s' from %s (%s)",
+        technology_name, model, cfg.provider,
     )
-    text = "".join(block.text for block in resp.content if block.type == "text").strip()
+
+    text = complete(
+        cfg.provider,
+        cfg.active_api_key,
+        model,
+        user=build_prompt(technology_name, notes),
+        max_tokens=8000,
+    )
 
     if text.startswith("```"):
         lines = text.splitlines()
@@ -147,7 +169,7 @@ def parse_markdown_to_pillars(markdown: str) -> list[SkeletonPillar]:
     current_chapter: SkeletonChapter | None = None
 
     for raw_line in markdown.splitlines():
-        line = raw_line.strip()
+        line = _clean_markdown_line(raw_line)
         if not line:
             continue
 
@@ -198,12 +220,23 @@ def generate_skeleton(technology_name: str, work_dir: Path, cfg, logger, notes: 
     keys, since there's no PDF in this flow.
     """
     markdown = call_model(technology_name, notes, cfg, logger)
+
+    # Write the raw model output BEFORE attempting to parse it, so it's
+    # always on disk for inspection -- previously this was written only
+    # after a successful parse, which meant the exact file the error
+    # message below points you to didn't exist yet on a parse failure.
+    work_dir.mkdir(parents=True, exist_ok=True)
+    md_path = work_dir / "skeleton.md"
+    md_path.write_text(markdown)
+
     pillars = parse_markdown_to_pillars(markdown)
 
     if not pillars:
+        snippet = markdown[:800] + ("..." if len(markdown) > 800 else "")
         raise RuntimeError(
-            "Could not parse any pillars out of the model's response. "
-            "Check work_dir/skeleton.md (written below) to see the raw output."
+            f"Could not parse any pillars out of the model's response. "
+            f"The raw output was written to {md_path} -- open it to see the "
+            f"full text. First part of what the model returned:\n\n{snippet}"
         )
 
     n_pillars, n_modules, n_chapters, n_pages = _counts(pillars)
@@ -211,10 +244,6 @@ def generate_skeleton(technology_name: str, work_dir: Path, cfg, logger, notes: 
         "Parsed skeleton: %d pillars, %d modules, %d chapters, %d pages",
         n_pillars, n_modules, n_chapters, n_pages,
     )
-
-    work_dir.mkdir(parents=True, exist_ok=True)
-    md_path = work_dir / "skeleton.md"
-    md_path.write_text(markdown)
 
     skeleton = {
         "technology_name": technology_name,

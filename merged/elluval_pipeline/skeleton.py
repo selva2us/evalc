@@ -249,28 +249,29 @@ def group_chapters_into_pillars(modules: list[dict], cfg, logger) -> list[dict]:
     """Returns [{"title": ..., "start_index": ...}, ...] describing contiguous
     pillar boundaries over `modules` (the real chapter list), decided by an
     LLM based on subject-matter groupings rather than a fixed chunk size."""
-    if not cfg.anthropic_api_key:
+    if not getattr(cfg, "active_api_key", None):
         logger.warning(
-            "No ANTHROPIC_API_KEY configured - falling back to fixed-size pillar "
-            "grouping (every %d chapters). Set ANTHROPIC_API_KEY for content-aware grouping.",
-            cfg.modules_per_pillar,
+            "No API key configured for provider '%s' - falling back to fixed-size "
+            "pillar grouping (every %d chapters). Configure a key for that "
+            "provider to enable content-aware grouping.",
+            getattr(cfg, "provider", "anthropic"), cfg.modules_per_pillar,
         )
         return _fallback_pillar_boundaries(len(modules), cfg.modules_per_pillar)
 
-    from anthropic import Anthropic
+    from .llm_providers import complete
 
     chapter_list = "\n".join(
         f"{i}: {m['title']} ({len(m['pages'])} sections)" for i, m in enumerate(modules)
     )
-    client = Anthropic(api_key=cfg.anthropic_api_key)
     try:
-        resp = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=2000,
+        text = complete(
+            cfg.provider,
+            cfg.active_api_key,
+            getattr(cfg, "content_model", None),
             system=PILLAR_GROUPING_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Chapters:\n{chapter_list}"}],
+            user=f"Chapters:\n{chapter_list}",
+            max_tokens=2000,
         )
-        text = "".join(b.text for b in resp.content if b.type == "text")
         text = re.sub(r"^```json|```$", "", text.strip(), flags=re.MULTILINE).strip()
         parsed = json.loads(text)
         pillars = parsed["pillars"]

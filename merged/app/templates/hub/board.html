@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Curriculum Hub — {{ technology_name or subject_id }}{% endblock %}
+{% block content %}
+
+{% set bucket_style = {
+  "done": "background: rgba(46,160,90,0.15); color: #2ea05a; border: 1px solid rgba(46,160,90,0.4);",
+  "failed": "background: rgba(220,60,60,0.12); color: #dc3c3c; border: 1px solid rgba(220,60,60,0.4);",
+  "skipped": "background: rgba(128,128,128,0.12); color: #888; border: 1px solid rgba(128,128,128,0.3);",
+  "pending": "background: rgba(230,170,30,0.15); color: #b9860f; border: 1px solid rgba(230,170,30,0.4);",
+  "not_started": "background: transparent; color: inherit; opacity: 0.6; border: 1px solid rgba(128,128,128,0.25);"
+} %}
+{% set bucket_label = {
+  "done": "Done", "failed": "Failed", "skipped": "Skipped",
+  "pending": "Generated — needs review", "not_started": "Not started"
+} %}
+
+<section class="result-header">
+  <p class="eyebrow">Curriculum Hub &mdash; Subject {{ subject_id }}</p>
+  <h1>{{ technology_name or "Subject " + subject_id }}</h1>
+  <p class="hero-sub">
+    {{ totals.get("done", 0) }} done &middot;
+    {{ totals.get("pending", 0) }} awaiting review &middot;
+    {{ totals.get("failed", 0) }} failed &middot;
+    {{ totals.get("not_started", 0) }} not started.
+    Click any item below to generate it, or Review to edit/approve/retry one
+    that's already been generated. Nothing here blocks anything else, so a
+    failed item (bad model output, AI quota exhausted mid-way, a rejected
+    upload) is safe to leave and come back to later.
+  </p>
+</section>
+
+<section class="markdown-panel" style="padding: 1rem;">
+  {% for row in rows %}
+    {% set node = row.node %}
+    {% set indent = {"pillar": 0, "module": 1, "chapter": 2, "page": 3}[node.level] %}
+    <div style="margin-left: {{ indent * 1.5 }}rem; padding: 0.5rem 0; border-bottom: 1px solid rgba(128,128,128,0.15);">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+        <div>
+          <span class="tag" style="text-transform:uppercase; font-size:0.7rem; opacity:0.6;">{{ node.level }}</span>
+          <strong>{{ node.title }}</strong>
+        </div>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+          {% for item in row.entries %}
+            <span style="font-size:0.72rem; padding:0.2rem 0.5rem; border-radius:999px; {{ bucket_style[item.bucket] }}"
+                  title="{{ item.raw_status or 'not started' }}">
+              {{ item.label }}: {{ bucket_label[item.bucket] }}
+            </span>
+            {% if item.bucket in ("not_started", "failed") %}
+              <form method="post" action="{{ url_for('hub.generate', run_id=run_id, asset_type=item.asset_type, node_key=node.key) }}" style="display:inline;">
+                <button type="submit" style="font-size:0.75rem; padding:0.3rem 0.6rem;">
+                  {{ "Retry" if item.bucket == "failed" else "Generate" }}
+                </button>
+              </form>
+            {% else %}
+              <a href="{{ url_for('hub.review', run_id=run_id, asset_type=item.asset_type, node_key=node.key) }}" style="font-size:0.75rem;">
+                Review
+              </a>
+            {% endif %}
+            {% if item.bucket not in ("done", "skipped") %}
+              <form method="post" action="{{ url_for('hub.skip', run_id=run_id, asset_type=item.asset_type, node_key=node.key) }}" style="display:inline;">
+                <button type="submit" style="font-size:0.75rem; padding:0.3rem 0.5rem; background:transparent; border:1px solid currentColor; opacity:0.6;">
+                  Skip
+                </button>
+              </form>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</section>
+
+<div class="action-row" style="margin-top: 1.5rem;">
+  <a href="{{ url_for('hub.start') }}">Load a Different Subject</a>
+</div>
+
+{% endblock %}

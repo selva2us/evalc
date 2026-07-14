@@ -6,9 +6,11 @@
   <p class="eyebrow">Admin</p>
   <h1>System Prompts</h1>
   <p class="hero-sub">
-    Every Anthropic system prompt used across the Architect tool, AI Pipeline, and
+    Every system prompt used across the Architect tool, AI Pipeline, and
     Asset Studio lives in <code>prompts/*.txt</code> and loads from here &mdash; nothing
-    is hardcoded in the services/routes/pipeline files. Edits take effect on the
+    is hardcoded in the services/routes/pipeline files. These are sent to whichever
+    AI provider is active (see <a href="{{ url_for('admin.settings') }}">Settings</a>).
+    Edits take effect on the
     next generation call, no restart needed. Dynamic prompts use
     <code>$identifier</code> placeholders (e.g. <code>$technology_name</code>) rather
     than curly braces, since several prompts instruct the model to respond in a

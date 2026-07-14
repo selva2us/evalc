@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Curriculum Hub{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <p class="eyebrow">Subject ID &gt; Full Board</p>
+  <h1>See the whole curriculum on one screen.</h1>
+  <p class="hero-sub">
+    Enter a Subject ID and every pillar, module, chapter, and page already
+    on that subject is fetched straight from the live curriculum tree and
+    laid out below &mdash; no AI skeleton step needed. Click any item to
+    generate, review/edit, and approve it on its own; a failed item or a
+    dead AI quota never blocks anything else, and reopening the same
+    Subject ID later picks up exactly where you left off.
+  </p>
+
+  <form class="generate-form" method="post" action="{{ url_for('hub.load') }}" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
+    <label for="subject_id" class="visually-hidden">Subject ID</label>
+    <input
+      type="text"
+      id="subject_id"
+      name="subject_id"
+      placeholder="e.g. 1274"
+      required
+      autocomplete="off"
+    >
+    <button type="submit">Load Subject</button>
+  </form>
+</section>
+
+{% endblock %}

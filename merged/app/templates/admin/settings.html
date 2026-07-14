@@ -6,9 +6,9 @@
   <p class="eyebrow">Admin</p>
   <h1>Environment Settings</h1>
   <p class="hero-sub">
-    Anthropic keys/models and curriculum backend connection details. Changes here
-    take effect immediately &mdash; no restart needed &mdash; and are written to
-    <code>.env</code> so they survive one.
+    Choose your active AI provider (Anthropic, OpenAI, or Gemini), its keys/models, and
+    curriculum backend connection details. Changes here take effect immediately &mdash;
+    no restart needed &mdash; and are written to <code>.env</code> so they survive one.
   </p>
 </section>
 
@@ -33,7 +33,13 @@
     {% if row.help_text %}<p class="field-help">{{ row.help_text }}</p>{% endif %}
     <form class="setting-form" method="post" action="{{ url_for('admin.settings_update') }}">
       <input type="hidden" name="key" value="{{ row.key }}">
-      {% if row.secret %}
+      {% if row.choices %}
+        <select name="value">
+          {% for choice_value, choice_label in row.choices %}
+          <option value="{{ choice_value }}" {% if row.current_value == choice_value %}selected{% endif %}>{{ choice_label }}</option>
+          {% endfor %}
+        </select>
+      {% elif row.secret %}
         <input type="password" name="value" placeholder="{{ row.placeholder or ('New ' + row.label) }}" autocomplete="off">
       {% else %}
         <input type="text" name="value" placeholder="{{ row.placeholder or ('New ' + row.label) }}" autocomplete="off">

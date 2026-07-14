@@ -15,22 +15,30 @@ Required environment variables:
     API_TOKEN       bearer token for the curriculum API
     API_COOKIE_FILE path to a file containing the session cookie string
                     (defaults to ./cookies.txt, same convention as before)
-    ANTHROPIC_API_KEY  used by rewriter.py to regenerate content
+
+    LLM_PROVIDER    which AI provider generates content: "anthropic"
+                    (default), "openai", or "gemini". See
+                    elluval_pipeline/llm_providers.py.
+    ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY
+                    the API key for whichever provider LLM_PROVIDER
+                    selects. Only the active provider's key is required.
 
 Optional:
     WORK_DIR        working/output directory root (default ./work)
     PAGES_PER_CHAPTER, MODULES_PER_PILLAR  skeleton grouping tunables
     DOCUMENT_ID     target id for POST /api/documents/syllabus-import/<id>
                     (can also be passed directly to pipeline.run_ai)
-    SKELETON_MODEL  model used to draft the curriculum outline (default
-                    claude-sonnet-4-6)
-    CONTENT_MODEL   model used to write each page's content (default
-                    claude-sonnet-4-6)
+    SKELETON_MODEL  model used to draft the curriculum outline (defaults
+                    to the active provider's default model, see
+                    llm_providers.DEFAULT_MODELS)
+    CONTENT_MODEL   model used to write each page's content (defaults the
+                    same way as SKELETON_MODEL)
     DEMO_MODE       "auto" (default) / "on" / "off" -- see demo_content.py.
                     In "auto", content generation automatically falls back
-                    to realistic mock content whenever ANTHROPIC_API_KEY is
-                    missing/unset, and automatically resumes calling the
-                    real API the moment a real key is configured.
+                    to realistic mock content whenever the active
+                    provider's API key is missing/unset, and automatically
+                    resumes calling the real API the moment a real key is
+                    configured.
 """
 from __future__ import annotations
 
@@ -45,6 +53,7 @@ except ImportError:
     pass
 
 from . import demo_content
+from .llm_providers import DEFAULT_MODELS, normalize_provider
 
 
 def _require(name: str, default: str | None = None) -> str:
@@ -71,10 +80,18 @@ class Config:
     skeleton_model: str = "claude-sonnet-4-6"
     content_model: str = "claude-sonnet-4-6"
     # "auto" (default): Demo Mode turns on automatically whenever no usable
-    # ANTHROPIC_API_KEY is configured, and turns back off automatically the
-    # moment a real one is -- no code changes needed either direction. Can
-    # be forced with DEMO_MODE=on / DEMO_MODE=off. See demo_content.py.
+    # API key is configured for the active provider, and turns back off
+    # automatically the moment a real one is -- no code changes needed
+    # either direction. Can be forced with DEMO_MODE=on / DEMO_MODE=off.
+    # See demo_content.py.
     demo_mode: str = "auto"
+    # --- Multi-provider AI settings ---
+    # `provider` selects which of the three keys below is actually used;
+    # the other two are simply ignored (they don't need to be blank).
+    # See elluval_pipeline/llm_providers.py for the provider abstraction.
+    provider: str = "anthropic"
+    openai_api_key: str | None = None
+    gemini_api_key: str | None = None
     headers: dict = field(init=False)
     upload_headers: dict = field(init=False)
 
@@ -126,13 +143,23 @@ class Config:
     def compiler_practice_url(self, chapter_id) -> str:
         return f"{self.base_url}/api/compiler/practice/chapter/{chapter_id}"
 
+    # ---- Multi-provider AI ------------------------------------------
+    @property
+    def active_api_key(self) -> str | None:
+        """The API key for whichever provider `self.provider` selects."""
+        return {
+            "anthropic": self.anthropic_api_key,
+            "openai": self.openai_api_key,
+            "gemini": self.gemini_api_key,
+        }.get(normalize_provider(self.provider))
+
     # ---- Demo Mode -------------------------------------------------
     @property
     def is_demo_mode(self) -> bool:
         """True when content-generation calls should use demo_content.py's
-        mock generators instead of the real Anthropic API. See
+        mock generators instead of a real provider call. See
         demo_content.resolve_demo_mode() for the exact rules."""
-        return demo_content.resolve_demo_mode(self.anthropic_api_key, self.demo_mode)
+        return demo_content.resolve_demo_mode(self.active_api_key, self.demo_mode)
 
 
 def _read_cookie_file(path: Path) -> str:
@@ -166,6 +193,9 @@ def load_config(subject_id: str | None = None) -> Config:
     work_dir = Path(os.environ.get("WORK_DIR", "./work")).resolve()
     work_dir.mkdir(parents=True, exist_ok=True)
 
+    provider = normalize_provider(os.environ.get("LLM_PROVIDER", "anthropic"))
+    provider_default_model = DEFAULT_MODELS[provider]
+
     return Config(
         base_url=_require("BASE_URL", "https://dev.elluval.com"),
         subject_id=subject_id or os.environ.get("SUBJECT_ID"),
@@ -176,7 +206,14 @@ def load_config(subject_id: str | None = None) -> Config:
         pages_per_chapter=int(os.environ.get("PAGES_PER_CHAPTER", 6)),
         modules_per_pillar=int(os.environ.get("MODULES_PER_PILLAR", 3)),
         document_id=os.environ.get("DOCUMENT_ID"),
-        skeleton_model=os.environ.get("SKELETON_MODEL", "claude-sonnet-4-6"),
-        content_model=os.environ.get("CONTENT_MODEL", "claude-sonnet-4-6"),
+        # If unset, fall back to the active provider's default model
+        # rather than a hardcoded Anthropic model name -- so switching
+        # LLM_PROVIDER without also setting SKELETON_MODEL/CONTENT_MODEL
+        # doesn't accidentally send an Anthropic model name to OpenAI/Gemini.
+        skeleton_model=os.environ.get("SKELETON_MODEL") or provider_default_model,
+        content_model=os.environ.get("CONTENT_MODEL") or provider_default_model,
         demo_mode=os.environ.get("DEMO_MODE", "auto"),
+        provider=provider,
+        openai_api_key=os.environ.get("OPENAI_API_KEY"),
+        gemini_api_key=os.environ.get("GEMINI_API_KEY"),
     )

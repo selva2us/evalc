@@ -19,13 +19,25 @@ main_bp = Blueprint("main", __name__)
 
 def _model_used_label() -> str:
     """What to record/display as the 'model' for a generated curriculum --
-    the real configured model, or a clear "demo-mode" label when Demo Mode
-    served the content instead (see app/services/llm_service.py)."""
-    api_key = current_app.config.get("ANTHROPIC_API_KEY")
+    the real configured provider + model, or a clear "demo-mode" label when
+    Demo Mode served the content instead (see app/services/llm_service.py)."""
+    provider = current_app.config.get("LLM_PROVIDER", "anthropic")
+    api_key_config_key = {
+        "anthropic": "ANTHROPIC_API_KEY",
+        "openai": "OPENAI_API_KEY",
+        "gemini": "GEMINI_API_KEY",
+    }.get(provider, "ANTHROPIC_API_KEY")
+    model_config_key = {
+        "anthropic": "ANTHROPIC_MODEL",
+        "openai": "OPENAI_MODEL",
+        "gemini": "GEMINI_MODEL",
+    }.get(provider, "ANTHROPIC_MODEL")
+
+    api_key = current_app.config.get(api_key_config_key)
     demo_setting = current_app.config.get("DEMO_MODE", "auto")
     if resolve_demo_mode(api_key, demo_setting):
         return "demo-mode (sample content)"
-    return current_app.config.get("ANTHROPIC_MODEL", "unknown")
+    return f"{provider}: {current_app.config.get(model_config_key, 'unknown')}"
 
 
 @main_bp.get("/")

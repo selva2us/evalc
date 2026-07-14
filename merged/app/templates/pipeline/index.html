@@ -3,14 +3,20 @@
 {% block content %}
 
 <section class="hero">
-  <p class="eyebrow">Skeleton &gt; Review &gt; Submit &gt; Content &gt; Upload</p>
+  <p class="eyebrow">Skeleton &gt; Review &gt; Submit &gt; Full Curriculum</p>
   <h1>Run the full AI curriculum pipeline end to end.</h1>
   <p class="hero-sub">
-    Generates a Pillar/Module/Chapter/Page skeleton with Claude, lets you
-    review it, submits it to your curriculum backend's syllabus-import
-    endpoint, then generates and uploads full page content automatically.
-    Requires <code>BASE_URL</code>, <code>API_TOKEN</code> and
-    <code>ANTHROPIC_API_KEY</code> to be configured in your environment.
+    Generates a Pillar/Module/Chapter/Page skeleton with your configured AI
+    provider (Anthropic, OpenAI, or Gemini &mdash; see
+    <a href="{{ url_for('admin.settings') }}">Settings</a>), lets you
+    review it, then submits it using only a Subject ID (no Document ID
+    needed). Once submitted, it fetches the curriculum tree and
+    automatically generates and submits pillar/module/chapter overviews,
+    every page's content, each chapter's FAQ and example/practice
+    programs, and each module's flashcards and quiz &mdash; in order,
+    for every pillar, module, and chapter. Requires <code>BASE_URL</code>,
+    <code>API_TOKEN</code> and an API key for the active provider to be
+    configured.
   </p>
 
   <form class="generate-form" method="post" action="{{ url_for('pipeline.generate_skeleton') }}" style="flex-direction: column; align-items: stretch; gap: 0.75rem;">
@@ -31,8 +37,8 @@
   <div class="hero-annotations" aria-hidden="true">
     <div class="annotation"><span class="tag">01</span> Skeleton</div>
     <div class="annotation"><span class="tag">02</span> Review</div>
-    <div class="annotation"><span class="tag">03</span> Submit</div>
-    <div class="annotation"><span class="tag">04</span> Content + Upload</div>
+    <div class="annotation"><span class="tag">03</span> Submit (Subject ID)</div>
+    <div class="annotation"><span class="tag">04</span> Full Curriculum</div>
   </div>
 </section>
 

@@ -30,8 +30,7 @@ import json
 import re
 from pathlib import Path
 
-from anthropic import Anthropic
-
+from .llm_providers import complete
 from .prompts import get_prompt
 
 # Prompt text lives in prompts/legacy_rewriter_prompt.txt (see
@@ -40,11 +39,9 @@ SYSTEM_PROMPT = get_prompt("legacy_rewriter_prompt")
 
 
 class Rewriter:
-    def __init__(self, cfg, logger, model: str = "claude-sonnet-4-6"):
-        if not cfg.anthropic_api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY is required for the rewrite stage.")
-        self.client = Anthropic(api_key=cfg.anthropic_api_key)
-        self.model = model
+    def __init__(self, cfg, logger, model: str | None = None):
+        self.cfg = cfg
+        self.model = model or getattr(cfg, "content_model", None)
         self.logger = logger
 
     def _call(self, title: str, raw_text: str, tables: list) -> dict:
@@ -59,13 +56,14 @@ class Rewriter:
             f"REFERENCE NOTES (for context only, do not paraphrase):\n{raw_text[:6000]}"
             f"{table_note}"
         )
-        resp = self.client.messages.create(
-            model=self.model,
-            max_tokens=2000,
+        text = complete(
+            self.cfg.provider,
+            self.cfg.active_api_key,
+            self.model,
             system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_msg}],
+            user=user_msg,
+            max_tokens=2000,
         )
-        text = "".join(block.text for block in resp.content if block.type == "text")
         text = re.sub(r"^```json|```$", "", text.strip(), flags=re.MULTILINE).strip()
         try:
             return json.loads(text)

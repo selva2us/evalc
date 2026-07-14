@@ -14,16 +14,31 @@ class BaseConfig:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # --- Anthropic / Claude settings ---
+    # --- Multi-provider AI settings ---
+    # LLM_PROVIDER picks which of the three keys/models below is actually
+    # used by the Architect tool and the AI Pipeline/Asset Studio -- the
+    # other two providers' keys simply sit unused until switched to. See
+    # elluval_pipeline/llm_providers.py for the provider abstraction and
+    # app/services/llm_service.py / elluval_pipeline/ai_*.py for callers.
+    LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "anthropic")
+
     ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
     ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5")
+
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+    OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-5.1")
+
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+    GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash")
+
     ANTHROPIC_MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS", 8000))
 
     # "auto" (default): fall back to realistic demo/mock content whenever no
-    # usable ANTHROPIC_API_KEY is configured, and switch back to the real
-    # API automatically the moment one is -- no code changes needed either
-    # direction. "on"/"off" force demo mode on or off. See
-    # elluval_pipeline/demo_content.py for the shared implementation.
+    # usable API key is configured for the active LLM_PROVIDER, and switch
+    # back to the real API automatically the moment one is -- no code
+    # changes needed either direction. "on"/"off" force demo mode on or
+    # off. See elluval_pipeline/demo_content.py for the shared
+    # implementation.
     DEMO_MODE = os.environ.get("DEMO_MODE", "auto")
 
     # --- Login (env-configured credentials; see app/auth.py) ---

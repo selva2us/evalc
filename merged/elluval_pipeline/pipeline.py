@@ -146,7 +146,13 @@ class Pipeline:
         return approved
 
     def submit_syllabus(self, skel: dict, document_id: str | None = None) -> dict | None:
-        document_id = document_id or self.cfg.document_id
+        # Document ID is no longer a required, separately-collected value:
+        # a Subject ID is enough to run the whole pipeline. If no
+        # document_id was passed in and none is configured via the
+        # DOCUMENT_ID env var, the subject_id doubles as the id used for
+        # /api/documents/syllabus-import/<id> -- adjust here (only) if
+        # your backend ever needs these to differ.
+        document_id = document_id or self.cfg.document_id or self.cfg.subject_id
         if not document_id:
             document_id = input("Enter the document id to submit to (/api/documents/syllabus-import/<id>): ").strip()
         self.cfg.document_id = document_id
@@ -164,29 +170,44 @@ class Pipeline:
         self.logger.info("=== Generating page content for every page via Claude ===")
         return ai_content.generate_all_content(skel, self.cfg.work_dir, self.cfg, self.logger, state=self.state)
 
+    def generate_and_submit_everything(self, skel: dict) -> dict:
+        """Full automatic walk of the approved skeleton, fetching the real
+        subject tree (via cfg.subject_id) and generating + submitting, in
+        order, every pillar/module/chapter overview, every page's content,
+        each chapter's FAQ/example/practice programs, and each module's
+        flashcards/quiz. See full_generation.run_full_generation for the
+        exact order and resumability guarantees."""
+        from . import full_generation
+        self.logger.info(
+            "=== Generating & submitting the full curriculum (overviews, pages, "
+            "FAQs, programs, flashcards, quizzes) for subject_id=%s ===", self.cfg.subject_id,
+        )
+        return full_generation.run_full_generation(skel, self.cfg, self.logger, self.state, self.cfg.work_dir)
+
     def run_ai(self, technology_name: str, notes: str | None = None, document_id: str | None = None):
         """
         Full PDF-free flow:
           1. Generate the skeleton with Claude.
           2. Open skeleton.md for review; stop here if not approved.
-          3. Submit the approved skeleton to /api/documents/syllabus-import/<id>.
-          4. Prompt for the subject id used by the tree-fetch/upload stage
-             (this may be the same id as document_id, or different -
-             depends on how your backend wires imports to subjects).
-          5. Generate full content for every page via Claude.
-          6. Upload each page's content via the existing uploader.py stage.
+          3. Prompt for the Subject ID (this is the only id required --
+             it's also used, by default, as the id submitted to
+             /api/documents/syllabus-import/<id>; see submit_syllabus()).
+          4. Submit the approved skeleton to syllabus-import.
+          5. Fetch the real subject tree and generate + submit every
+             pillar/module/chapter overview, every page's content, each
+             chapter's FAQ/example/practice programs, and each module's
+             flashcards/quiz -- see generate_and_submit_everything().
         """
         skel = self.generate_skeleton_ai(technology_name, notes=notes)
 
         if not self.review_skeleton():
             return None
 
-        self.submit_syllabus(skel, document_id=document_id)
-
         self.prompt_for_subject_id()
 
-        self.generate_content_ai(skel)
-        self.upload()
+        self.submit_syllabus(skel, document_id=document_id)
+
+        self.generate_and_submit_everything(skel)
 
         self.logger.info("AI pipeline complete for '%s'.", technology_name)
         return skel

@@ -141,13 +141,11 @@ class CurriculumClient:
         else in the pipeline needs to change if you do.
         """
         url = self.cfg.syllabus_import_url(document_id)
-        payload = {
-            "technologyName": technology_name,
-            "markdown": markdown,
-            "tree": tree,
-        }
+        filename = f"{technology_name.strip().lower().replace(' ', '-')}-curriculum.md" if technology_name else "curriculum.md"
+        files = {"file": (filename, markdown.encode("utf-8"), "text/markdown")}
         self.logger.info("Submitting syllabus import to %s", url)
-        resp = self.session.post(url, headers=self.cfg.headers, json=payload, timeout=60)
+        self.logger.info("Submitting syllabus import to %s", self.cfg.upload_headers)
+        resp = self.session.post(url, headers=self.cfg.upload_headers, files=files, timeout=60)
         if not resp.ok:
             self.logger.error("Syllabus import failed (%s): %s", resp.status_code, resp.text[:500])
             return None
@@ -157,6 +155,24 @@ class CurriculumClient:
             body = {}
         self.logger.info("Syllabus import succeeded for document %s", document_id)
         return body
+
+
+def fetch_title_lookup(client: "CurriculumClient", work_dir, force_refresh: bool = False) -> dict:
+    """title(lowercased) -> id for every pillar/module/chapter/page in the
+    real subject tree, cached to work_dir/page_lookup.json. Shared by
+    Review Mode, the manual Asset Studio, and the automatic full
+    generator so the subject tree is only fetched once per run."""
+    import json
+    from pathlib import Path
+
+    cache_path = Path(work_dir) / "page_lookup.json"
+    if cache_path.exists() and not force_refresh:
+        return json.loads(cache_path.read_text())
+    tree = client.fetch_tree()
+    lookup: dict = {}
+    collect_pages(tree, lookup)
+    cache_path.write_text(json.dumps(lookup, indent=2))
+    return lookup
 
 
 def collect_pages(node, lookup: dict):

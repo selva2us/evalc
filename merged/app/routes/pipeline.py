@@ -4,12 +4,18 @@ reworked from a terminal prompt-and-confirm flow into a multi-step web wizard:
 
   1. GET  /pipeline/                      -> form: technology name + notes
   2. POST /pipeline/skeleton               -> generates the skeleton, redirects to review
-  3. GET  /pipeline/review/<run_id>        -> shows skeleton.md, asks for document_id
+  3. GET  /pipeline/review/<run_id>        -> shows skeleton.md, asks for subject_id
+                                               (no document_id needed -- subject_id
+                                               alone is enough; see submit() below)
   4. POST /pipeline/submit/<run_id>        -> submits syllabus, then either:
-       mode=auto   (default, unchanged): generates + uploads every page's
-                    content automatically, shows a result summary.
-       mode=review (new, optional):       hands off to the page-by-page
-                    Review Mode routes below instead of auto-generating.
+       mode=auto   (default): fetches the subject tree and generates +
+                    submits the entire curriculum -- pillar/module/chapter
+                    overviews, every page's content, each chapter's FAQ and
+                    example/practice programs, and each module's flashcards
+                    and quiz -- see elluval_pipeline/full_generation.py.
+       mode=review (optional):            hands off to the page-by-page
+                    Review Mode routes below instead of auto-generating
+                    (page content only).
 
   Review Mode (new, optional; only reachable by explicitly choosing it on
   the review page):
@@ -43,7 +49,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.pipeline_config import new_run_id, work_dir_for
 from elluval_pipeline.ai_content import ContentGenerator, _breadcrumb_context
-from elluval_pipeline.api_client import CurriculumClient, collect_pages
+from elluval_pipeline.api_client import CurriculumClient, fetch_title_lookup
 from elluval_pipeline.pipeline import Pipeline
 
 pipeline_bp = Blueprint("pipeline", __name__)
@@ -85,15 +91,8 @@ def _page_order(skeleton: dict) -> list[tuple[str, str, str]]:
 def _page_lookup(pipe: Pipeline, work_dir: Path) -> dict:
     """title(lowercased) -> page id in the real subject tree, cached to
     disk so Review Mode doesn't refetch the whole tree on every page."""
-    cache_path = work_dir / "page_lookup.json"
-    if cache_path.exists():
-        return json.loads(cache_path.read_text())
     client = CurriculumClient(pipe.cfg, pipe.logger)
-    tree = client.fetch_tree()
-    lookup: dict = {}
-    collect_pages(tree, lookup)
-    cache_path.write_text(json.dumps(lookup, indent=2))
-    return lookup
+    return fetch_title_lookup(client, work_dir)
 
 
 def _is_handled(pipe: Pipeline, key: str) -> bool:
@@ -182,16 +181,20 @@ def submit(run_id: str):
         flash("No skeleton found for that run. Start a new one.", "error")
         return redirect(url_for("pipeline.index"))
 
-    document_id = request.form.get("document_id", "").strip()
+    # Document ID is no longer collected from the user -- Subject ID alone
+    # is enough to submit the skeleton and drive the rest of the pipeline
+    # (see Pipeline.submit_syllabus, which falls back to subject_id when
+    # no separate document_id is configured).
     subject_id = request.form.get("subject_id", "").strip()
-    # New, optional: "auto" (default) preserves the exact existing
-    # behavior below. "review" is the new page-by-page workflow.
+    # New, optional: "auto" (default) generates + submits everything for
+    # the whole curriculum (overviews, pages, FAQs, programs, flashcards,
+    # quizzes). "review" is the page-by-page content-only workflow.
     mode = request.form.get("mode", "auto").strip().lower()
     if mode not in ("auto", "review"):
         mode = "auto"
 
-    if not document_id or not subject_id:
-        flash("Both Document ID and Subject ID are required to submit.", "error")
+    if not subject_id:
+        flash("Subject ID is required to submit.", "error")
         return redirect(url_for("pipeline.review", run_id=run_id))
 
     skeleton = json.loads(skeleton_json_path.read_text())
@@ -202,7 +205,8 @@ def submit(run_id: str):
     pipe.cfg.subject_id = subject_id
 
     try:
-        pipe.submit_syllabus(skeleton, document_id=document_id)
+        pipe.submit_syllabus(skeleton)
+        document_id = pipe.cfg.document_id
 
         # Always record run metadata (used by the optional Asset Studio,
         # /pipeline/assets/..., to resolve subject_id for later requests).
@@ -219,9 +223,13 @@ def submit(run_id: str):
         if mode == "review":
             return redirect(url_for("pipeline.pages_start", run_id=run_id))
 
-        # --- existing automatic behavior, unchanged ---
-        pipe.generate_content_ai(skeleton)
-        pipe.upload()
+        # --- automatic full-curriculum generation ---
+        # Fetches the real subject tree via subject_id, then walks
+        # pillar -> module -> chapter -> pages (in order), then that
+        # chapter's FAQ/example/practice programs, then -- once every
+        # chapter in a module is done -- that module's flashcards/quiz.
+        # Repeats for every module and every pillar. See full_generation.py.
+        summary = pipe.generate_and_submit_everything(skeleton)
     except Exception as exc:
         flash(f"Pipeline run failed: {exc}", "error")
         return render_template(
@@ -239,6 +247,7 @@ def submit(run_id: str):
         success=True,
         document_id=document_id,
         subject_id=subject_id,
+        summary=summary,
     )
 
 

@@ -1,69 +1,231 @@
-You are a world-class curriculum architect, senior software engineer, technical author, and educational content designer.
-Your task is to generate a COMPLETE markdown learning skeleton for the technology provided by the user.
+You are a world-class curriculum architect, distinguished software engineer, senior technical author, instructional designer, and industry mentor with experience designing curricula for universities, engineering colleges, corporate training programs, and large-scale learning platforms.
+
+Your task is to generate a COMPLETE and INDUSTRY-GRADE markdown learning skeleton for the technology provided by the user.
+
 Technology:
 $technology_name
+
+Additional Notes:
 $notes_block
+
+Target Audience:
+
+* Indian engineering students
+* Diploma students
+* Polytechnic students
+* BCA, MCA, B.Sc CS, B.Tech, BE students
+* Job seekers and fresh graduates
+* Working professionals transitioning into software engineering
+* Corporate trainees
+
+Curriculum Objective:
+Design a curriculum that can take a learner from absolute beginner level to enterprise production expertise and technical interview readiness.
+
+The curriculum must be suitable for:
+
+* University syllabus design
+* LMS platforms
+* Technical books
+* Bootcamps
+* Corporate training
+* Self-learning roadmaps
+* Certification programs
+
 The output must be a clean and structured markdown document.
-The markdown must follow this hierarchy exactly:
+
+The markdown hierarchy MUST follow this structure exactly:
+
 # Pillar
 ## Module
 ### Chapter
 Page
+
 Example:
-# Pillar 1 – Foundations
-## Module 1 – Introduction
-### Chapter 1 – History
-Page 1 - Origins
-Page 2 - Evolution
-Page 3 - Major Milestones
-Rules:
-1. Generate between 8 and 15 Pillars.
-2. Each Pillar should contain 4 to 10 Modules.
-3. Each Module should contain 5 to 12 Chapters.
-4. Each Chapter should contain 5 to 20 Pages.
-5. The structure must progress naturally from beginner to expert level.
-The curriculum must include:
-- History and evolution
-- Core concepts
-- Syntax and fundamentals
-- Internal architecture
-- Runtime behavior
-- Memory management
-- Design patterns
-- Ecosystem and libraries
-- Tooling
-- Security
-- Performance
-- Debugging
-- Testing
-- Deployment
-- Best practices
-- Real-world applications
-- Enterprise usage
-- Advanced topics
-- Common mistakes
-- Interview preparation
-- Future roadmap
-Technology-specific sections must be included, appropriate to $technology_name.
-Requirements:
-- Avoid generic tutorials.
-- Do not generate content explanations.
-- Generate only the curriculum structure.
-- Ensure every topic appears exactly once.
-- Avoid duplicate chapters.
-- Ensure logical learning progression.
-- Prefer industry standards over academic ordering.
-- Include internals and architecture wherever applicable.
-- Include historical context where relevant.
-- Include deprecated technologies if they influenced modern design.
-- Include ecosystem tools and alternatives.
-- Include production and enterprise usage patterns.
-Formatting rules:
-- Output must be valid markdown.
-- Use only markdown headings and bullet-free page lines.
-- Do not include introductory text.
-- Do not include conclusions.
-- Do not include explanations outside the hierarchy.
-- Use title case for all headings.
-- Keep naming concise and professional.
-Respond with ONLY the markdown document. No preamble, no code fences, no commentary.
+# Pillar 1 – Origins and Philosophy
+## Module 1 - Computing Landscape Before Java
+### Chapter 1 - Language Evolution
+Page 1 - Machine Language
+Page 2 - Assembly Language
+Page 3 - High-Level Languages
+Page 4 - Structured Programming
+Page 5 - Object-Oriented Shift
+
+### Chapter 2 - Procedural Systems
+Page 1 - Procedural Paradigm
+Page 2 - C Language Model
+Page 3 - C++ Extensions
+Page 4 - Compilation Model
+Page 5 - Runtime Risks
+Page 6 - Platform Lock-In
+
+Structural Rules:
+
+1. Generate between 10 and 15 Pillars.
+2. Each Pillar must contain 4 to 10 Modules.
+3. Each Module must contain 5 to 12 Chapters.
+4. Each Chapter must contain 5 to 20 Pages.
+5. Every Page represents approximately 5 to 10 minutes of classroom teaching.
+6. The curriculum should support:
+
+   * 100 to 300 teaching hours
+   * 500 to 1500 curriculum pages
+7. Learning progression must move naturally from:
+
+   * Beginner
+   * Intermediate
+   * Advanced
+   * Production
+   * Enterprise
+   * Architect level
+
+Mandatory Curriculum Areas:
+
+* Historical Background
+* Evolution Timeline
+* Industry Adoption Journey
+* Core Concepts
+* Syntax Fundamentals
+* Language Features
+* Internal Architecture
+* Runtime Internals
+* Compiler or Interpreter Internals
+* Memory Management
+* Execution Model
+* Concurrency Model
+* Data Structures
+* Algorithms Used Internally
+* Standard Library
+* Ecosystem Overview
+* Package Managers
+* Dependency Management
+* Tooling
+* Build Systems
+* Development Environment Setup
+* Debugging Techniques
+* Logging Strategies
+* Error Handling
+* Testing Methodologies
+* Security Practices
+* Performance Optimization
+* Profiling Techniques
+* Deployment Models
+* CI/CD Integration
+* Cloud Deployment
+* Containerization
+* Monitoring and Observability
+* Scalability Patterns
+* Design Principles
+* Design Patterns
+* Architectural Patterns
+* Enterprise Development Practices
+* Real World Applications
+* Production Case Studies
+* Anti Patterns
+* Common Mistakes
+* Migration Strategies
+* Deprecated Features
+* Legacy Technologies
+* Compatibility Considerations
+* Industry Standards
+* Coding Standards
+* Accessibility Considerations
+* Documentation Practices
+* API Design Practices
+* Interview Preparation
+* Frequently Asked Questions
+* System Design Considerations
+* Future Roadmap
+* Emerging Trends
+
+Technology-Specific Requirements:
+
+Include all major topics, tools, standards, frameworks, protocols, APIs, libraries, and ecosystem components relevant to $technology_name.
+
+The curriculum MUST include:
+
+* Legacy technologies that influenced modern design.
+* Deprecated concepts still encountered in maintenance projects.
+* Industry-standard alternatives and competing technologies.
+* Enterprise usage patterns.
+* Production deployment strategies.
+* Common interview questions and frequently tested concepts.
+* Real-world implementation approaches used by Indian service companies, startups, product companies, and multinational corporations.
+
+Indian Industry Alignment:
+
+Prioritize topics commonly used in:
+
+* TCS
+* Infosys
+* Wipro
+* Cognizant
+* Accenture
+* Capgemini
+* HCL
+* Zoho
+* Freshworks
+* Amazon India
+* Flipkart
+* Paytm
+* Razorpay
+* Swiggy
+* Zomato
+
+Include concepts relevant to:
+
+* Campus placements
+* Service company interviews
+* Product company interviews
+* GATE syllabus overlap where applicable
+* University examinations
+* Practical lab sessions
+* Mini projects
+* Major projects
+
+Content Quality Rules:
+
+* Avoid generic tutorials.
+* Do not generate explanations or descriptions.
+* Generate only the curriculum hierarchy.
+* Ensure every topic appears exactly once.
+* Avoid duplicate chapters.
+* Avoid duplicate pages.
+* Ensure logical progression.
+* Prefer industry ordering over academic ordering.
+* Include internals wherever applicable.
+* Include architecture wherever applicable.
+* Include runtime behavior wherever applicable.
+* Include production considerations wherever applicable.
+* Include security considerations wherever applicable.
+* Include scalability considerations wherever applicable.
+
+Formatting Rules:
+
+* Output must be valid markdown.
+* Use only markdown headings.
+* Use plain Page lines without bullets.
+* Use title case for all headings.
+* Use concise professional naming.
+* Do not include code blocks.
+* Do not include introductions.
+* Do not include conclusions.
+* Do not include commentary.
+* Do not include explanations.
+* Do not include summaries.
+* Respond with ONLY the markdown hierarchy.
+
+Final Validation Requirements:
+
+Before returning the curriculum ensure:
+
+* No duplicate topics exist.
+* No missing foundational concepts exist.
+* No missing advanced concepts exist.
+* No important industry topics are omitted.
+* Learning order is correct.
+* Beginner concepts appear before advanced concepts.
+* Historical topics appear before modern topics.
+* Production topics appear after fundamentals.
+* Enterprise topics appear after production topics.
+* Interview topics appear near the end of the curriculum.
+* Future topics appear at the end of the curriculum.

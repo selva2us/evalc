@@ -51,6 +51,10 @@ class SettingField:
     secret: bool = False
     help_text: str = ""
     placeholder: str = ""
+    # If set, the admin UI renders this field as a <select> of (value,
+    # label) pairs instead of a free-text/password input -- used for the
+    # LLM_PROVIDER picker below.
+    choices: tuple[tuple[str, str], ...] | None = None
 
 
 # The registry the admin UI renders from. Adding a future AI provider key
@@ -58,8 +62,19 @@ class SettingField:
 # about the route, template, or persistence logic needs to change.
 SETTINGS_FIELDS: list[SettingField] = [
     SettingField(
+        "LLM_PROVIDER", "Active AI Provider", "AI Provider",
+        help_text="Which provider the Architect tool, AI Pipeline, and Asset Studio all "
+                   "call. Only the selected provider's API key below needs to be set.",
+        placeholder="anthropic",
+        choices=(
+            ("anthropic", "Anthropic (Claude)"),
+            ("openai", "OpenAI (GPT)"),
+            ("gemini", "Google (Gemini)"),
+        ),
+    ),
+    SettingField(
         "ANTHROPIC_API_KEY", "Anthropic API Key", "AI Provider", secret=True,
-        help_text="Used by both the Architect tool and the AI Pipeline/Asset Studio. "
+        help_text="Required only when Active AI Provider is set to Anthropic. "
                    "Leave unset to run in Demo Mode (see the banner at the top of every page).",
         placeholder="sk-ant-...",
     ),
@@ -68,12 +83,34 @@ SETTINGS_FIELDS: list[SettingField] = [
         placeholder="claude-sonnet-5",
     ),
     SettingField(
+        "OPENAI_API_KEY", "OpenAI API Key", "AI Provider", secret=True,
+        help_text="Required only when Active AI Provider is set to OpenAI.",
+        placeholder="sk-...",
+    ),
+    SettingField(
+        "OPENAI_MODEL", "OpenAI Model (Architect tool)", "AI Provider",
+        placeholder="gpt-5.1",
+    ),
+    SettingField(
+        "GEMINI_API_KEY", "Gemini API Key", "AI Provider", secret=True,
+        help_text="Required only when Active AI Provider is set to Gemini.",
+        placeholder="AIza...",
+    ),
+    SettingField(
+        "GEMINI_MODEL", "Gemini Model (Architect tool)", "AI Provider",
+        placeholder="gemini-2.5-pro/gemini-3.5-flash",
+    ),
+    SettingField(
         "SKELETON_MODEL", "Skeleton Model (AI Pipeline)", "AI Provider",
-        placeholder="claude-sonnet-4-6",
+        help_text="Model name for the active provider. Leave blank to use that "
+                   "provider's default.",
+        placeholder="e.g. claude-sonnet-4-6 / gpt-5.1 / gemini-2.5-pro / gemini-3.5-flash",
     ),
     SettingField(
         "CONTENT_MODEL", "Content Model (AI Pipeline / Asset Studio)", "AI Provider",
-        placeholder="claude-sonnet-4-6",
+        help_text="Model name for the active provider. Leave blank to use that "
+                   "provider's default.",
+        placeholder="e.g. claude-sonnet-4-6 / gpt-5.1 / gemini-2.5-pro / gemini-3.5-flash",
     ),
     SettingField(
         "DEMO_MODE", "Demo Mode", "AI Provider",
@@ -119,6 +156,8 @@ def get_current_settings() -> list[dict]:
             "placeholder": field.placeholder,
             "configured": bool(raw),
             "masked_value": mask_value(raw, field.secret),
+            "choices": field.choices,
+            "current_value": raw,
         })
     return rows
 
@@ -135,6 +174,12 @@ def _validate(field: SettingField, value: str) -> str:
         raise SettingValidationError("Base URL must start with http:// or https://")
     if field.key == "DEMO_MODE" and value and value.lower() not in ("auto", "on", "off"):
         raise SettingValidationError('Demo Mode must be "auto", "on", or "off".')
+    if field.choices and value:
+        valid_values = {choice_value for choice_value, _label in field.choices}
+        if value not in valid_values:
+            raise SettingValidationError(
+                f"{field.label} must be one of: {', '.join(sorted(valid_values))}."
+            )
     return value
 
 

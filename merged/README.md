@@ -9,9 +9,15 @@ One Flask app combining two previously separate tools:
    generate → review → submit-to-backend → generate-page-content → upload
    flow, now driven from the browser instead of the terminal.
 
-They share one Flask app, one `requirements.txt`, and the same
-`ANTHROPIC_API_KEY`. Nothing else about either tool's logic changed —
-the merge is purely at the web-app layer.
+They share one Flask app, one `requirements.txt`, and one active AI
+provider selection (`LLM_PROVIDER`). Nothing else about either tool's logic
+changed — the merge is purely at the web-app layer.
+
+> **Multi-model support:** this app can call **Anthropic (Claude)**,
+> **OpenAI (GPT)**, or **Google Gemini** — pick which one is active via the
+> `LLM_PROVIDER` env var or the admin Settings page (`/admin/settings`),
+> no restart or code changes needed. See
+> `elluval_pipeline/llm_providers.py` for the provider abstraction.
 
 ## Project layout
 
@@ -19,12 +25,12 @@ the merge is purely at the web-app layer.
 curriculum-suite/
 ├── app/
 │   ├── __init__.py            # app factory, registers all 3 blueprints
-│   ├── config.py               # Flask/db/Anthropic config (dev/prod/testing)
+│   ├── config.py               # Flask/db/AI-provider config (dev/prod/testing)
 │   ├── extensions.py           # shared SQLAlchemy instance
 │   ├── models.py               # Curriculum model (Architect tool)
 │   ├── pipeline_config.py      # NEW: per-run work_dir helper for the Pipeline
 │   ├── services/
-│   │   └── llm_service.py      # Architect tool's prompt + Anthropic call
+│   │   └── llm_service.py      # Architect tool's prompt + provider call
 │   ├── routes/
 │   │   ├── main.py             # Architect: index, generate, result, history
 │   │   ├── api.py               # Architect: JSON API
